@@ -14,19 +14,19 @@ contract Authorizer is Owned {
 
     enum authorizationType{registrar,validator}
 
-    modifier isRegistrar {
-        if (uint(Authorizers[msg.sender].authorizerType) != 0) {
-            assert(true);
-        }
-        _;
-    }
+    // modifier isRegistrar {
+    //     if (uint(Authorizers[msg.sender].authorizerType) != 0) {
+    //         assert(true);
+    //     }
+    //     _;
+    // }
 
-    modifier isValidator {
-        if (uint(Authorizers[msg.sender].authorizerType) != 1) {
-            assert(true);
-        }
-        _;
-    }
+    // modifier isValidator {
+    //     if (uint(Authorizers[msg.sender].authorizerType) != 1) {
+    //         assert(true);
+    //     }
+    //     _;
+    // }
 
     function addAuthorizer(
         address _authorizer, 
@@ -59,6 +59,22 @@ contract Authorizer is Owned {
             ) {
         require(msg.sender == owner || msg.sender == _authorizer);
         return (Authorizers[_authorizer].name,Authorizers[_authorizer].designation,Authorizers[_authorizer].authorizerType,Authorizers[_authorizer].additionalInfo);
+    }
+
+    function isRegistrar(address caller) constant external returns(bool){
+        if (uint(Authorizers[msg.sender].authorizerType) == 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function isValidator(address caller) constant external returns(bool){
+        if (uint(Authorizers[msg.sender].authorizerType) == 1) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }

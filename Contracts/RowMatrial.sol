@@ -1,16 +1,20 @@
 pragma solidity ^0.4.18;
 import './Authorizer.sol';
+import './Inventory.sol';
 
-contract RowMatrial is Authorizer {
+contract RowMatrial is Owned {
     
+    Authorizer Auth;
+    Inventory Invt;
+
     struct Supplier {
         address supplier;
         bytes32 name;
         bytes32 city;
     }
 
-    struct Product {
-        bytes32 productID;
+    struct RowMatrialInfo {
+        bytes32 rowMatrialID;
         bytes32 parent;
         bytes32 name;
         bytes32 groupID;
@@ -18,16 +22,18 @@ contract RowMatrial is Authorizer {
         address supplier;
         bytes32[] childs;
         bytes32 additionalDiscription;
+        uint256 price;
+        bytes32 inventoryStoreID;        
     }
 
-    struct ProductOwnersDetails {
+    struct RowMatrialInfoOwnersDetails {
         bytes32 name;
         bytes32 companyName;
     }
 
     mapping(address => Supplier) SupplierDetails;
-    mapping(bytes32 => Product) ProductDetail;
-    mapping(address => ProductOwnersDetails) owners;
+    mapping(bytes32 => RowMatrialInfo) RowMatrialMapping;
+    mapping(address => RowMatrialInfoOwnersDetails) owners;
 
     modifier isSupplier(address _supplier) {
         if (SupplierDetails[_supplier].supplier == _supplier) {
@@ -36,15 +42,25 @@ contract RowMatrial is Authorizer {
         _;
     }
 
+    function RowMatrial(
+        address authorizerContractAddress, 
+        address inventoryContractAddress
+    ) 
+        public 
+        {
+        Auth = Authorizer(authorizerContractAddress);
+        Invt = Inventory(inventoryContractAddress);
+    }
+
     function registerSupplier(
         bytes32 _name,
         bytes32 _city,
         address _supplier
     ) 
-        isRegistrar 
         public 
         returns(bool)
         {
+        require(Auth.isRegistrar(msg.sender));
         require(SupplierDetails[_supplier].name != "");
         Supplier memory newSupplier;
         newSupplier.name = _name;
@@ -58,71 +74,84 @@ contract RowMatrial is Authorizer {
         bytes32 _name,
         bytes32 _groupID,
         address _supplier,
-        bytes32 _additionalDiscription
+        bytes32 _additionalDiscription,
+        uint256 _price
     )
-        isRegistrar
         isSupplier(_supplier)
         public
         returns(bytes32) 
         {
-        bytes32 _productID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp);
+        require(Auth.isRegistrar(msg.sender));
+        bytes32 _rowMatrialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,_price,block.timestamp);
 
-        Product memory newProduct;
-        newProduct.name = _name;
-        newProduct.groupID = _groupID;
-        newProduct.supplier = _supplier;
-        newProduct.additionalDiscription = _additionalDiscription;
-        newProduct.productID = _productID;
-        ProductDetail[_productID] = newProduct;
+        RowMatrialInfo memory newRowMatrialInfo;
+        newRowMatrialInfo.name = _name;
+        newRowMatrialInfo.groupID = _groupID;
+        newRowMatrialInfo.supplier = _supplier;
+        newRowMatrialInfo.additionalDiscription = _additionalDiscription;
+        newRowMatrialInfo.price = _price;
+        newRowMatrialInfo.rowMatrialID = _rowMatrialID;
+        RowMatrialMapping[_rowMatrialID] = newRowMatrialInfo;
     }
-    function transferProductOwnerShip(
+    function transferRowMatrialInfoOwnerShip(
         address _newOwner,
-        bytes32[] productIDs
+        bytes32[] rowMatrialIDs
     )
         isSupplier(msg.sender)
         public
         {
-        for (uint i = 0; i < productIDs.length;i++) {
-            if (ProductDetail[productIDs[i]].currentOwner == msg.sender) {
-                ProductDetail[productIDs[i]].currentOwner = _newOwner;
+        for (uint i = 0; i < rowMatrialIDs.length;i++) {
+            if (RowMatrialMapping[rowMatrialIDs[i]].currentOwner == msg.sender) {
+                RowMatrialMapping[rowMatrialIDs[i]].currentOwner = _newOwner;
             }
         }
     }
 
-    function viewProductByID( 
-        bytes32 _productID
+    function viewRowMatrialInfoByID( 
+        bytes32 _rowMatrialID
     )
         public
         constant
         returns (
-            bytes32 parent,
+            // bytes32 parent,
             bytes32 name,
             bytes32 groupID,
             address currentOwner,
             address supplier,
             bytes32[] childs,
-            bytes32 additionalDiscription
+            bytes32 additionalDiscription,
+            uint256 price
         ) {
         return (
-            ProductDetail[_productID].parent,
-            ProductDetail[_productID].name,
-            ProductDetail[_productID].groupID,
-            ProductDetail[_productID].currentOwner,
-            ProductDetail[_productID].supplier,
-            ProductDetail[_productID].childs,
-            ProductDetail[_productID].additionalDiscription
+            // RowMatrialMapping[_rowMatrialID].parent,
+            RowMatrialMapping[_rowMatrialID].name,
+            RowMatrialMapping[_rowMatrialID].groupID,
+            RowMatrialMapping[_rowMatrialID].currentOwner,
+            RowMatrialMapping[_rowMatrialID].supplier,
+            RowMatrialMapping[_rowMatrialID].childs,
+            RowMatrialMapping[_rowMatrialID].additionalDiscription,
+            RowMatrialMapping[_rowMatrialID].price
         );
     }
 
-    // function viewProductByGroupID(
+    // function viewRowMatrialInfoByGroupID(
     //     bytes32 _groupID
     // )
     //     public 
     //     constant
     //     returns(
-    //         bytes32[] products
+    //         bytes32[] RowMatrialInfos
     //     ) {
     //     for (uint i = 0;i<)
     // }
+
+    function broadcastRowMatrialRequirement(
+        bytes32 _inventoryID,
+        bytes32 _groupID
+    )
+        external
+        {
+        
+    }
 
 }
