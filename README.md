@@ -18,15 +18,16 @@
 ### Struct
 1. broadcast: requirements{inventorID,units}
 ### Functions
-1. `register_supplier(supplier_address,name,city)` : new supplier can be registered.
-2. `registerRowMatrial(name,_groupID,_supplier,_additionalDiscription,_productID) `: new raw materials can be registered.
-3. `viewProductByID(_productID)` : status of the products can be checked wheather they are available or not. it returns 		parent,name,groupID,currentOwner,supplier,childs,additionalDiscription
-4. `transferProductOwnerShip(_newOwner,productIDs)` : the product can be transferred on a request.
-5. `viewSupplier(supplier)`: it will return the suppliers details from where the product arrived.
-6. `broadcastRequirement(inventoryID,groupID,units)`: it will broadcast the raw material requirements to all vendors.
-7. `viewReq<groupID>`(reuests can be viewed for a particular product id)
-7. `sendProposal(groupID,unit,price)` : A quotation will be sent to the inventory by suppliers.
-8. `generateSalesOrder(groupID,units,price,discription)`: final bill with product will be sent to the inventory.
+1. `registerSupplier(_name,_city,_supplier)` : new supplier can be registered returns bool.
+2. `registerRowMatrial(name,_groupID,_supplier,_additionalDiscription,_price) `: new raw materials can be registered. it returns a byte32 ID.
+3. `viewRowMatrialInfoByID(_rowMatrialID)` : status of the products can be checked wheather they are available or not. it returns
+     [_rowMatrialID].name,[_rowMatrialID].groupID,[_rowMatrialID].currentOwner,[_rowMatrialID].supplier,         [_rowMatrialID].additionalDiscription 
+4. `transferRowMatrialInfoOwnerShip(_newOwner,rowMatrialIDs)` : the product can be transferred on a request.
+5. `viewSupplier(address _supplier)`: it will return the suppliers details from where the product arrived.returns supplier,name,city.
+6. `broadcastRowMatrialRequirement(_inventoryID,_groupID,_units,_pricePerUnit)`: it will broadcast the raw material requirements to all vendors.
+
+7. `viewGroupIDRequirement<_groupID>`(reuests can be viewed for a particular product id) 
+8. `sendSellOrder(_groupID,_inventorID)`: final bill with product will be sent to the inventory. 
 
  
           
@@ -34,12 +35,37 @@
 
 ## Inventory.sol
 ### Functions
-1. `registerInventory(_inventoryHead,_inventoryName,_inventoryCity)` : used to register inventory.
-2. `requestRowMatrials(_inventorID,_groupID)` : used to request new raw materials.
-3. `viewInventoryStore()` : inventory store having a particular product can be viewed.
-4. `searchProductByID(productID)`: used to search available products
-5. `requestRawMaterial(groupID,quantity)` : new requirements for raw materials can be sent.
-6. `receiveProposal(groupID)` : proposal accepted or denied by inventory.
-7. `generatePurchaseOrder(groupID,unit,price)` : after recieving proposal Purchase order sent to the supplier
 
-##Manager.sol
+1. recieveRawMatarials(_name,_groupID, _currentOwner,_supplier,_additionalDiscription,_price,_inventorID) : for receiving the rawmaterials
+2. requestRowMatrials(_inventorID,_groupID,_units) :new requirements for raw materials can be sent.
+3. registerInventory(_inventoryHead,_inventoryName,_inventoryCity) returns _inventoryID : new inventory can be registered
+4. setRawMaterialContractAddress(rowMatrialContractAddress) returns bool
+5. Inventory(authorizerContractAddress)
+6. SearchProductByGroupID()
+7. viewInventory()
+8. viewInventoryProducts()
+9. 
+
+### Events:
+1. event RawMatarialsReceived(_rawMatrialID,_parent,_name,_groupID,_currentOwner,_supplier, _additionalDiscription,_price,_inventorID)
+2. event RawMaterialAlreadyRequested(_inventorID,_groupID,_units,_pricePerUnit)
+3. event InventoryRegistered(_inventoryHead, _inventoryName, _inventoryCity)
+ 
+
+
+
+## Owned.sol
+### Functions
+1. transferOwnership(newOwner) : ownership can be transferred to a new owner.
+
+
+## manager.sol
+### Functions
+1. RegisterManager(address _manager, byte32 name, byte32 city) : new manager can be registered.
+2. AcceptRequestFromRetailer(address _retailerID,productGroupID,Quantity) : New Request from retailer can be registered. return will be bool(request granted or not)
+3. SearchInventoryByGroupID(Product Group ID) : Inventory/warehouse can be searched by products unique group ID. return will be bool(available or not)
+4. ViewInventoryList(Product Group ID) : all the inventory having particular product will be displayed. return will be list of inventory having particular product.
+5. SendQuotationToRetailer(Product Group ID,Unit,Price,Description) : A quotation can be send to the retailer for requested order.
+6. AcceptPOFromRetailer(Product Group ID,Unit,Price) : PO can be accepted from retailer.
+7. AcceptProductFromInventory(Product ID,Unit): products can be accepted from inventory.
+8. SendProductToRetailer(Product ID,Unit) : product can be send to retailer.
