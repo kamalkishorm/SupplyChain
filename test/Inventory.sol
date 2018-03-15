@@ -1,11 +1,11 @@
 pragma solidity ^0.4.18;
-import './RowMatrial.sol';
+import './RawMatrial.sol';
 import './Authorizer.sol';
 
 contract Inventory is Owned {
     
     Authorizer Auth;
-    RowMatrial RowMat;
+    RawMatrial RawMat;
 
     struct InventoryStoreInfo {
         address inventoryHead;
@@ -25,8 +25,8 @@ contract Inventory is Owned {
         uint256 price;
         bytes32 inventoryStoreID;
     }
-    // struct RowMatrialInfo {
-    //     bytes32 rowMatrialID;
+    // struct RawMatrialInfo {
+    //     bytes32 RawMatrialID;
     //     bytes32 parent;
     //     bytes32 name;
     //     bytes32 groupID;
@@ -52,15 +52,15 @@ contract Inventory is Owned {
     
     function Inventory(
         address authorizerContractAddress
-       // address rowMatrialContractAddress
+       // address RawMatrialContractAddress
     ) 
         public 
         {
         Auth = Authorizer(authorizerContractAddress);
        
     }
-    function setRawMaterialContractAddress(address rowMatrialContractAddress) public onlyOwner returns(bool){
-         RowMat = RowMatrial(rowMatrialContractAddress);
+    function setRawMaterialContractAddress(address RawMatrialContractAddress) public onlyOwner returns(bool){
+         RawMat = RawMatrial(RawMatrialContractAddress);
     }
     function registerInventory(
         address _inventoryHead,
@@ -84,7 +84,7 @@ contract Inventory is Owned {
         return _inventoryID;
     }
 
-    function requestRowMatrials(
+    function requestRawMatrials(
         bytes32 _inventorID,
         bytes32 _groupID,
         uint256 _units
@@ -96,7 +96,7 @@ contract Inventory is Owned {
     }
 
     function recieveRawMatarials(
-        bytes32 _rowMatrialID,
+        bytes32 _RawMatrialID,
         // bytes32 _parent,
         bytes32 _name,
         bytes32 _groupID,
@@ -111,7 +111,7 @@ contract Inventory is Owned {
         {
 
         Product memory newProduct;
-        newProduct.productID = _rowMatrialID;
+        newProduct.productID = _RawMatrialID;
         // newProduct.parent = _parent;
         newProduct.name = _name;
         newProduct.groupID = _groupID;
@@ -123,6 +123,6 @@ contract Inventory is Owned {
         newProduct.inventoryStoreID = _inventorID;
 
         ProductsInInventory[_inventorID].push(newProduct);
-        ProductInfo[_rowMatrialID] = newProduct;
+        ProductInfo[_RawMatrialID] = newProduct;
     }
 }
