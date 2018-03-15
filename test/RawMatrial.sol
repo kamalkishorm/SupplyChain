@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 import './Authorizer.sol';
 import './Inventory.sol';
 
@@ -92,10 +92,10 @@ contract RawMatrial is Owned {
         newSupplier.city = _city;
         newSupplier.supplier = _supplier;
         SupplierDetails[_supplier] = newSupplier;
-        SupplierRegistered(_name,_city,_supplier);
+        emit SupplierRegistered(_name,_city,_supplier);
         return true;
         } else {
-            SupplierAlreadyRegistered(SupplierDetails[_supplier].name,SupplierDetails[_supplier].city,SupplierDetails[_supplier].supplier);
+            emit SupplierAlreadyRegistered(SupplierDetails[_supplier].name,SupplierDetails[_supplier].city,SupplierDetails[_supplier].supplier);
             return false;
         }
     }
@@ -140,7 +140,7 @@ contract RawMatrial is Owned {
             tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMatrialsIDs;
             tempBytesArray.push(_rawMatrialID);
             groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMatrialsIDs = tempBytesArray;
-            delete(tempBytesArray);
+            // delete(tempBytesArray);
             // groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         } else {
             RawMatarialsArray memory newRawMatarialsArray;
@@ -148,9 +148,9 @@ contract RawMatrial is Owned {
             tempBytesArray.push(_rawMatrialID);
             newRawMatarialsArray.rawMatrialsIDs = tempBytesArray;
             groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
-            delete(tempBytesArray);
         }
-        RawMatrialRegistered(_rawMatrialID,_groupID,_supplier);
+        delete(tempBytesArray);
+        emit RawMatrialRegistered(_rawMatrialID,_groupID,_supplier);
         return(_rawMatrialID);
     }
 
@@ -166,7 +166,7 @@ contract RawMatrial is Owned {
                 RawMatrialMapping[rawMatrialIDs[i]].currentOwner = _newOwner;
             }
         }
-        RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMatrialIDs);
+        emit RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMatrialIDs);
     }
 
     function viewRawMatrialInfoByID( 
@@ -220,7 +220,7 @@ contract RawMatrial is Owned {
             newProductGroupIDRequirement.pricePerUnit += _pricePerUnit;
             groupIdRequirement[_groupID] = newProductGroupIDRequirement;
         // }
-        RawMatrialRequirement(_groupID,_units,_pricePerUnit,_inventoryID);
+        emit RawMatrialRequirement(_groupID,_units,_pricePerUnit,_inventoryID);
     }
 
     function viewGroupIDRequirement(
@@ -231,10 +231,11 @@ contract RawMatrial is Owned {
         isSupplier(msg.sender)
         returns(
             bytes32 inventoryID,
-            uint256 units
+            uint256 units,
+            uint256 inStock
         ) {
         require(groupIdRequirement[_groupID].units != 0);
-        return (groupIdRequirement[_groupID].inventoryID,groupIdRequirement[_groupID].units);
+        return (groupIdRequirement[_groupID].inventoryID,groupIdRequirement[_groupID].units,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
     }
 
     function sendSellOrder(
@@ -254,7 +255,7 @@ contract RawMatrial is Owned {
                 // RawMatrialMapping[id].parent,
                 RawMatrialMapping[id].name,
                 RawMatrialMapping[id].groupID,
-                RawMatrialMapping[id].currentOwner,
+                // RawMatrialMapping[id].currentOwner,
                 RawMatrialMapping[id].supplier,
                 // RawMatrialMapping[id].childs,
                 RawMatrialMapping[id].additionalDiscription,
@@ -264,8 +265,9 @@ contract RawMatrial is Owned {
         delete(RawMatrialMapping[id]);
         }
         }
+        delete(groupIdRequirement[_groupID]);
         groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID].units;
-        OrderTransfer(_groupID,groupIdRequirement[_groupID].units,_inventorID);
+        emit OrderTransfer(_groupID,groupIdRequirement[_groupID].units,_inventorID);
     }
 
 }
