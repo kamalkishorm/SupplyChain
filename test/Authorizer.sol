@@ -12,7 +12,7 @@ contract Authorizer is Owned {
 
     mapping(address => AuthorizerDetails) Authorizers;
 
-    enum authorizationType{registrar,validator}
+    enum authorizationType{unauth,registrar,validator}
 
     // modifier isRegistrar {
     //     if (uint(Authorizers[msg.sender].authorizerType) != 0) {
@@ -61,16 +61,16 @@ contract Authorizer is Owned {
         return (Authorizers[_authorizer].name,Authorizers[_authorizer].designation,Authorizers[_authorizer].authorizerType,Authorizers[_authorizer].additionalInfo);
     }
 
-    function isRegistrar(address caller) constant external returns(bool){
-        if (uint(Authorizers[msg.sender].authorizerType) == 0) {
+    function isRegistrar(address caller) constant external returns(bool) {
+        if (uint(Authorizers[caller].authorizerType) == 1) {
             return true;
         } else {
             return false;
         }
     }
 
-    function isValidator(address caller) constant external returns(bool){
-        if (uint(Authorizers[msg.sender].authorizerType) == 1) {
+    function isValidator(address caller) constant external returns(bool) {
+        if (uint(Authorizers[caller].authorizerType) == 2) {
             return true;
         } else {
             return false;

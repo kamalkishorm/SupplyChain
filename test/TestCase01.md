@@ -7,16 +7,17 @@
 
 
 # Contract Address
-1. 0x692a70d2e424a56d2c6c27aa97d1a86395877b3a   :   Authorizer
-2. 0xbbf289d846208c16edc8474705c748aff07732db   :   RawMatrial
-3. 0x0dcd2f752394c41875e259e00bb44fd505297caf   :   Inventory
+1. 0xbde95422681e4c3984635af2f2f35f8c44a4ddc9   :   Authorizer
+2. 0x35ef07393b57464e93deb59175ff72e6499450cf   :   RawMatrial
+3. 0xb87213121fb89cbd8b877cb1bb3ff84dd2869cfa   :   Inventory
 
 
 
 # Contracts
 ## Authorizer
-1. addAuthorizer ("0x14723a09acff6d2a60dcdf7aa4aff308fddc160c","Auth0","Registrar",0,"can add user")
+1. addAuthorizer ("0x14723a09acff6d2a60dcdf7aa4aff308fddc160c","Auth0","Registrar",1,"can add user")
 
 
 ## RawMatrial
 1. registerSupplier ("sup1","jpr","0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db")
+2. registerRawMatrial ("abc","gp01","0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db","plastic",12)

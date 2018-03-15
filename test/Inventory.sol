@@ -39,7 +39,7 @@ contract Inventory is Owned {
     // }
 
     modifier isInventor(bytes32 _inventorID) {
-        if(InventoryStore[_inventorID].inventoryHead != msg.sender) {
+        if (InventoryStore[_inventorID].inventoryHead != msg.sender) {
             assert(true);
         }
         _;
@@ -59,8 +59,8 @@ contract Inventory is Owned {
         Auth = Authorizer(authorizerContractAddress);
        
     }
-    function setRawMaterialContractAddress(address RawMatrialContractAddress) public onlyOwner returns(bool){
-         RawMat = RawMatrial(RawMatrialContractAddress);
+    function setRawMaterialContractAddress(address rawMatrialContractAddress) public onlyOwner returns(bool) {
+         RawMat = RawMatrial(rawMatrialContractAddress);
     }
     function registerInventory(
         address _inventoryHead,
@@ -87,16 +87,17 @@ contract Inventory is Owned {
     function requestRawMatrials(
         bytes32 _inventorID,
         bytes32 _groupID,
-        uint256 _units
+        uint256 _units,
+        uint256 _pricePerUnit
     ) 
         public 
         isInventor(_inventorID)
         {
-        
+        RawMat.broadcastRawMatrialRequirement(_inventorID,_groupID,_units,_pricePerUnit);
     }
 
     function recieveRawMatarials(
-        bytes32 _RawMatrialID,
+        bytes32 _rawMatrialID,
         // bytes32 _parent,
         bytes32 _name,
         bytes32 _groupID,
@@ -111,7 +112,7 @@ contract Inventory is Owned {
         {
 
         Product memory newProduct;
-        newProduct.productID = _RawMatrialID;
+        newProduct.productID = _rawMatrialID;
         // newProduct.parent = _parent;
         newProduct.name = _name;
         newProduct.groupID = _groupID;
@@ -123,6 +124,6 @@ contract Inventory is Owned {
         newProduct.inventoryStoreID = _inventorID;
 
         ProductsInInventory[_inventorID].push(newProduct);
-        ProductInfo[_RawMatrialID] = newProduct;
+        ProductInfo[_rawMatrialID] = newProduct;
     }
 }
