@@ -194,6 +194,18 @@ contract RawMatrial is Owned {
         );
     }
 
+    function checkGroupIDUnitsAvailable(
+        bytes32 _groupID
+    )
+        public 
+        constant
+        isSupplier(msg.sender)
+        return (
+            bytes32 GroupID,
+            uint256 Units
+        ) {
+        return(_groupID,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
+    }
     // function viewRawMatrialInfoByGroupID(
     //     bytes32 _groupID
     // )
