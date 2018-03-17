@@ -11,7 +11,7 @@
 1. 0x692a70d2e424a56d2c6c27aa97d1a86395877b3a   :   Authorizer
 2. 0x0dcd2f752394c41875e259e00bb44fd505297caf   :   RawMatrial
 3. 0x5e72914535f202659083db3a02c984188fa26e9f   :   Inventory
-4. 
+4. 0x15e08fa9fe3e3aa3607ac57a29f92b5d8cb154a2   :   OperationTeam
 
 ## Contracts
 ### Authorizer
