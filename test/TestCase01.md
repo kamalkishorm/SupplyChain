@@ -67,3 +67,10 @@
 1. registorInventory ("0x583031d1113ad414f02576bd6afabfb302140225","jpr01","jpr")
         `0x3ef665faecaae2e7a553ac473f6bbe9944810c40db7c4555fc68f7e798b55bd6`
 2. requestRawMatarials ("0x3ef665faecaae2e7a553ac473f6bbe9944810c40db7c4555fc68f7e798b55bd6","gp01",2,12)
+
+
+## Warehouse
+1. "0xdd870fa1b7c4700f2bd7f44238821c26f7392148","War1","JP"     Register warehouse
+2. "pro1","101",100,"0xdd870fa1b7c4700f2bd7f44238821c26f7392148"    Register Product
+3. "0xca37d915458ef540ade6068dfe2f44e8fa733c","101",5      Request Raw Material 
+4. "0xca37d915458ef540ade6068dfe2f44e8fa733c","pro1",["101"],"0x9ccdd9cc0741a14845141281d5a803364cda78b55352220f081e639941926b45" SellProducttoRetailer 
