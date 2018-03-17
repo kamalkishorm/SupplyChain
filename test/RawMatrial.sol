@@ -25,7 +25,8 @@ contract RawMatrial is Owned {
         // bytes32[] childs;
         bytes32 additionalDiscription;
         // uint256 price;
-        // bytes32 inventoryStoreID;        
+        // bytes32 inventoryStoreID;   
+        bool isConsume;     
     }
 
     struct RawMatrialInfoOwnersDetails {
@@ -200,7 +201,7 @@ contract RawMatrial is Owned {
         public 
         constant
         isSupplier(msg.sender)
-        return (
+        returns (
             bytes32 GroupID,
             uint256 Units
         ) {
@@ -223,7 +224,7 @@ contract RawMatrial is Owned {
         uint256 _units,
         uint256 _pricePerUnit
     )
-        external
+        public
         {
         ProductGroupIDRequirement memory newProductGroupIDRequirement;
         // if(groupIdRequirement[_groupID].units == 0) {
@@ -252,7 +253,7 @@ contract RawMatrial is Owned {
 
     function sendSellOrder(
         bytes32 _groupID,
-        bytes32 _inventorID
+        bytes32 _inventoryID
     )
         public
         isSupplier(msg.sender)
@@ -261,7 +262,7 @@ contract RawMatrial is Owned {
         
         for (uint i = 0; i < groupIdRequirement[_groupID].units ; i++) {
         bytes32 id = groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].rawMatrialsIDs[i];
-        if (groupIdRequirement[_groupID].inventoryID==_inventorID) {
+        if (groupIdRequirement[_groupID].inventoryID==_inventoryID) {
             Invt.recieveRawMatarials(
                 RawMatrialMapping[id].rawMatrialID,
                 // RawMatrialMapping[id].parent,
@@ -274,12 +275,13 @@ contract RawMatrial is Owned {
                 groupIdRequirement[_groupID].pricePerUnit,
                 groupIdRequirement[_groupID].inventoryID
             );
-        delete(RawMatrialMapping[id]);
+        // delete(RawMatrialMapping[id]);
+        RawMatrialMapping[id].isConsume = true;
         }
         }
         delete(groupIdRequirement[_groupID]);
         groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID].units;
-        emit OrderTransfer(_groupID,groupIdRequirement[_groupID].units,_inventorID);
+        emit OrderTransfer(_groupID,groupIdRequirement[_groupID].units,_inventoryID);
     }
 
 }
