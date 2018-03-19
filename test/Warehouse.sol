@@ -28,13 +28,20 @@
             address retailer;
         } 
         
-        struct ProductRequirement 
+        struct warehouseProductRequirement 
         {
             bytes32 requesterID;
             bytes32 productName;
             uint256 units;
         }
 
+        struct InventoryProductRequirement 
+        {
+            bytes32 requesterID;
+            bytes32 productName;
+            uint256 units;
+        }
+        
         struct ProductsArray
         {
             uint256  units;
@@ -43,9 +50,14 @@
         
         mapping(bytes32 => WarehouseInfo) WareHouse;
         mapping(bytes32 => ProductInfo) product;
-        mapping(bytes32 => ProductRequirement) RequirementMap;
-        
+        mapping(bytes32 => warehouseProductRequirement) RequirementMap;
+        mapping(bytes32 => InventoryProductRequirement) RequirementMapInv;
+
         mapping(bytes32 => mapping(bytes32 => ProductsArray)) ProductsINFO;
+
+        event newProductRequirementOperationTeam(bytes32 _requesterID,bytes32 _productName,uint256 _units);
+        event ProductRegistered(bytes32 _productName,bytes32 _productID,uint256 _productPrice,bytes32 _productWarehouseID);
+        event WarehouseRegister(address _warehouseHead,bytes32 warehouseID, bytes32 _warehouseName,bytes32 _warehouseCity);
         
         
         
@@ -66,6 +78,7 @@
             WareHouse[_warehouseID] = newWarehouseInfo;
             // emit InventoryRegistered(_inventoryID,_inventoryName,_inventoryCity);
             return _warehouseID;
+            emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);
         }
         
         function registerProduct(bytes32 _productName,bytes32 _productID,uint256 _productPrice,bytes32 _productWarehouseID) public returns (bool)
@@ -95,25 +108,34 @@
                 ProductsINFO[_productID][_productWarehouseID] = newProductsArray;
             }
             delete tempBytesArray;
+            emit ProductRegistered(_productName,_productID,_productPrice,_productWarehouseID);
             return true;
         }
             
         function searchProduct(bytes32 _searchProduct) public constant returns (bytes32 productName, uint price, bytes32 warehouseID, bool isConsume , address retailer)
         {
-            return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);
-            
+            return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);   
         }
 
 
-        function requestProduct(bytes32 _requesterID, bytes32 _productName,uint256 _units) public 
+        function requestProduct(bytes32 _requesterID, bytes32 _productName, uint256 _units, bytes32 _fromWarehouseID) public returns (bool)
         {
-            broadcastProductRequirement(_requesterID,_productName,_units);
+            // broadcastProductRequirement(_requesterID,_productName,_units);
+            if( ProductsINFO[_productName][_fromWarehouseID].units >= _units)
+            {
+                newProductRequirement(_requesterID,_productName,_units);
+                return true;
+            }
+            else
+            {
+                broadcastProductRequirement(_requesterID,_productName,_units);
+            }
         }
 
-        function broadcastProductRequirement(bytes32 _requesterID,bytes32 _productName,uint256 _units) public 
+        function newProductRequirement(bytes32 _requesterID , bytes32 _productName,uint256 _units) public 
         {
             
-            ProductRequirement memory newProductRequirement;
+            warehouseProductRequirement memory newProductRequirement;
             newProductRequirement.requesterID = _requesterID;
             newProductRequirement.productName = _productName;
             newProductRequirement.units += _units;
@@ -121,13 +143,23 @@
             RequirementMap[_productName] = newProductRequirement;
         }
 
+        function broadcastProductRequirement(bytes32 _requesterID,bytes32 _productName,uint256 _units) public
+        {
+            InventoryProductRequirement memory newInvProductRequirement;
+            newInvProductRequirement.requesterID = _requesterID;
+            newInvProductRequirement.productName = _productName;
+            newInvProductRequirement.units += _units;
+            // productRequirment[_productName] = newProductRequirement;
+            RequirementMapInv[_productName] = newInvProductRequirement;
+            emit newProductRequirementOperationTeam( _requesterID,_productName, _units);
+        }
 
         function searchWarehouseByGroupID(bytes32 _productName) public constant returns(bytes32 _warehouseID)
         {
             return product[_productName].warehouseID;
         }
 
-        function viewProductRequirment(bytes32 _productName, bytes32 _fromWarehouse) public constant returns (bytes32 requesterID, bytes32 requestedProductName, uint units, uint inStock) 
+        function viewProductRequirment(bytes32 _productName, bytes32 _fromWarehouse) external returns (bytes32 requesterID, bytes32 requestedProductName, uint units, uint inStock) 
         // uint instock
         {
             // require(productRequirment[_productName].units!=0);
@@ -136,19 +168,15 @@
             // return (productRequirment[_productName].requesterID,productRequirment[_productName].productName,productRequirment[_productName].units);
         }
         
-        function SellProductTOretailer(address _newOwner,bytes32 _productName, bytes32[] _productIDtoTransfer, bytes32 __fromWarehouseID) public
+        function SellProductTOretailer(address _retailer,bytes32 _productName, bytes32 _productIDtoTransfer, bytes32 __fromWarehouseID) public
         {
             // require(Auth.isValidator(msg.sender));
             require(RequirementMap[_productName].units <= ProductsINFO[_productName][__fromWarehouseID].units);
-            for(uint i=0; i<_productIDtoTransfer.length; i++)
+            if(product[_productIDtoTransfer].isConsume == false)
             {
-                if(product[_productIDtoTransfer[i]].isConsume == false)
-                {
-                    product[_productIDtoTransfer[i]].isConsume == true;
-                    product[_productIDtoTransfer[i]].retailer == _newOwner;
-                }
+                product[_productIDtoTransfer].isConsume == true;
+                product[_productIDtoTransfer].retailer == _retailer;
             }
-            // emit RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMatrialIDs);
         }
 
     }
