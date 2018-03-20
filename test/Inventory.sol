@@ -3,12 +3,14 @@ import './RawMatrial.sol';
 import './Authorizer.sol';
 import './Owned.sol';
 import './OperationTeam.sol';
+import './Warehouse.sol';
 
 contract Inventory is Owned {
     
     Authorizer Auth;
     RawMatrial RawMat;
     OperationTeam opTeam;
+    Warehouse WH;
 
     bytes32[] inventoryStoreList;
     bytes32[] tempBytesArray;
@@ -115,6 +117,9 @@ contract Inventory is Owned {
 
     function setRawMaterialContractAddress(address rawMatrialContractAddress) public onlyOwner returns(bool) {
          RawMat = RawMatrial(rawMatrialContractAddress);
+    }
+    function setWarehouseContractAddress(address _warehouseContractAddress) public onlyOwner returns(bool) {
+        WH = Warehouse(_warehouseContractAddress);
     }
     
     function registerInventory(
@@ -324,6 +329,7 @@ contract Inventory is Owned {
     // }
 
     function getRawMatrialsFromInventory(
+        address _opTeamLead,
         bytes32 _operationName,
         bytes32 _inventoryID,
         uint256 _units,
@@ -335,7 +341,7 @@ contract Inventory is Owned {
         returns(
             bool
         ) {
-        require(opTeam.isOprator(_operationName,msg.sender)); 
+        require(opTeam.isOperator(_operationName,_opTeamLead)); 
         //require(operationDetails[_operationName].teamLead == msg.sender);
         // require(groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].units >= _units);
         // bytes32[] tempBArray;
@@ -416,17 +422,64 @@ contract Inventory is Owned {
             bytes32[] finalProductIDs,
             uint256 unitsAvailable
         ) {
-        require(opTeam.isOprator(_operationName,msg.sender)); 
+        require(opTeam.isOperator(_operationName,msg.sender)); 
         return(finalProductsArray[_operationName].FinalProductIDs,finalProductsArray[_operationName].units);
     }
 
+    function sendProductsToWarehouse(
+        bytes32 _warehouseID,
+        bytes32 _productCategory,
+        uint256 _units,
+        bool _sendAllProduct
+    )
+        public
+        returns(
+            bool
+        ) {
+        require(opTeam.isOperator(_productCategory,msg.sender));
+        require(finalProductsArray[_operationName].units >= _units || _sendAllProduct);
+        if(_sendAllProduct){
+            _units = finalProductsArray[_operationName].units;
+        }
+        for( uint i = 0; i<_units;i++){
+            WH.registerProduct(_productCategory,finalProductsArray[_operationName].FinalProductIDs[i],manufacturedProducts[finalProductsArray[_operationName].FinalProductIDs[i]].price,_warehouseID);
+            delete(finalProductsArray[_operationName].FinalProductIDs[i]);
+            finalProductsArray[_operationName].units -= 1;
+        }
+        return true;
+    }
+
+    function serachFinalProductByID(
+        bytes32 _finalProductID
+    )
+        public
+        constant
+        returns(
+            bytes32 productID,
+            bytes32 productCategory,
+            bytes32[] childs,
+            bytes32 additionalDiscription,
+            uint256 price,
+            bool isConsume
+        ) {
+        require(opTeam.isOperator( manufacturedProducts[_finalProductID].productCategory,msg.sender));
+        return(
+            manufacturedProducts[_finalProductID].productID,
+            manufacturedProducts[_finalProductID].productCategory,
+            manufacturedProducts[_finalProductID].childs,
+            manufacturedProducts[_finalProductID].additionalDiscription,
+            manufacturedProducts[_finalProductID].price,
+            manufacturedProducts[_finalProductID].isConsume
+        )
+
+    }
     // function sendProductsToWarehouse(
     //     bytes32 _operationName,
     //     uint256 _units
     // )
     //     public
     //     returns(bool){
-    //     require(opTeam.isOprator(_operationName,msg.sender)); 
+    //     require(opTeam.isOperator(_operationName,msg.sender)); 
     // }
     //bytes32 rMGid = 
 }

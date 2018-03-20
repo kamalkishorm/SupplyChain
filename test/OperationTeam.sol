@@ -5,7 +5,7 @@ import './Owned.sol';
 contract OperationTeam is Owned {
     
     Authorizer Auth;
-    // Inventory Invt;
+    Inventory Invt;
     // address WH;
 
     bytes32[] operationTeams;
@@ -59,6 +59,16 @@ contract OperationTeam is Owned {
         // WH = _warehouseContractAddress;
     }
 
+    function setInventoryContractAddress(
+        bytes32 _inventoryContractAddress
+    )
+        public
+        onlyOwner
+        returns(
+            bool
+        ) {
+         Invt = Inventory(_inventoryContractAddress);
+    }
     function registerOperationTeam(
         address _teamLead,
         address[] _teamMembers,
@@ -90,12 +100,24 @@ contract OperationTeam is Owned {
         }
     }
 
-    function isOprator(bytes32 _operationName,address operationLeadAddress) public constant returns(bool) {
+    function isOperator(bytes32 _operationName,address operationLeadAddress) public constant returns(bool) {
         if (operationDetails[_operationName].teamLead == operationLeadAddress) {
            return true ;
         } else {
             return false;
         }
+    }
+
+    function makeFinalProducts(
+        bytes32 _operationName,
+        bytes32 _inventoryID,
+        uint256 _units
+    )
+        public
+        returns(
+            bool
+        ) {
+        return (Inv.getRawMatrialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMatrialGroupID,operationDetails[_operationName].rawMatrialUnits,operationDetails[_operationName].productDescription));
     }
     // function getRawMatrialsFromInventory(
     //     bytes32 _operationName,
