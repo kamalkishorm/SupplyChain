@@ -118,6 +118,7 @@ contract Inventory is Owned {
     function setRawMaterialContractAddress(address rawMatrialContractAddress) public onlyOwner returns(bool) {
          RawMat = RawMatrial(rawMatrialContractAddress);
     }
+    
     function setWarehouseContractAddress(address _warehouseContractAddress) public onlyOwner returns(bool) {
         WH = Warehouse(_warehouseContractAddress);
     }
@@ -425,29 +426,48 @@ contract Inventory is Owned {
         require(opTeam.isOperator(_operationName,msg.sender)); 
         return(finalProductsArray[_operationName].FinalProductIDs,finalProductsArray[_operationName].units);
     }
-
-    function sendProductsToWarehouse(
-        bytes32 _warehouseID,
-        bytes32 _productCategory,
-        uint256 _units,
-        bool _sendAllProduct
-    )
-        public
-        returns(
-            bool
-        ) {
-        require(opTeam.isOperator(_productCategory,msg.sender));
-        require(finalProductsArray[_operationName].units >= _units || _sendAllProduct);
+    function sendProdutsToWarehouse( bytes32 _warehouseID, bytes32 _productCategory, uint256 _units, bool _sendAllProduct ) public returns( bool ) 
+    {
+        opTeam.isOperator(_productCategory,msg.sender); 
+        require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct); 
         if(_sendAllProduct){
-            _units = finalProductsArray[_operationName].units;
-        }
-        for( uint i = 0; i<_units;i++){
-            WH.registerProduct(_productCategory,finalProductsArray[_operationName].FinalProductIDs[i],manufacturedProducts[finalProductsArray[_operationName].FinalProductIDs[i]].price,_warehouseID);
-            delete(finalProductsArray[_operationName].FinalProductIDs[i]);
-            finalProductsArray[_operationName].units -= 1;
-        }
+            _units = finalProductsArray[_productCategory].units; 
+        } 
+        delete(tempBytesArray); 
+        delete(priceCalculated) ; 
+        for( uint i = 0; i<_units;i++){ 
+            tempBytesArray.push(finalProductsArray[_productCategory].FinalProductIDs[i]); priceCalculated += manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].price; 
+            manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].isConsume = true; 
+            finalProductsArray[_productCategory].units -= 1; 
+            delete(finalProductsArray[_productCategory].FinalProductIDs[i]); 
+            
+        } 
+        priceCalculated = (priceCalculated)/_units; 
+        WH.registerProduct(msg.sender,_productCategory,tempBytesArray,priceCalculated,_warehouseID);
         return true;
     }
+    // function sendProductsToWarehouse(
+    //     bytes32 _warehouseID,
+    //     bytes32 _productCategory,
+    //     uint256 _units,
+    //     bool _sendAllProduct
+    // )
+    //     public
+    //     returns(
+    //         bool
+    //     ) {
+    //     require(opTeam.isOperator(_productCategory,msg.sender));
+    //     require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct);
+    //     if(_sendAllProduct){
+    //         _units = finalProductsArray[_productCategory].units;
+    //     }
+    //     for( uint i = 0; i<_units;i++){
+    //         WH.registerProduct(_productCategory,finalProductsArray[_productCategory].FinalProductIDs[i],manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].price,_warehouseID);
+    //         delete(finalProductsArray[_productCategory].FinalProductIDs[i]);
+    //         finalProductsArray[_productCategory].units -= 1;
+    //     }
+    //     return true;
+    // }
 
     function serachFinalProductByID(
         bytes32 _finalProductID
@@ -470,7 +490,7 @@ contract Inventory is Owned {
             manufacturedProducts[_finalProductID].additionalDiscription,
             manufacturedProducts[_finalProductID].price,
             manufacturedProducts[_finalProductID].isConsume
-        )
+        );
 
     }
     // function sendProductsToWarehouse(

@@ -105,7 +105,12 @@ contract Authorizer is Owned {
 
 
 contract Manager is Owned {
-    // Warehouse war;------------------
+
+    bytes32[] tempBytesArray;
+    bytes32[] tempUintArray;
+    
+    address[] RequestPendingRetailerAddressArray;
+
     struct ManagerDetails {
         address managerAddress;
         bytes32 name;
@@ -114,34 +119,33 @@ contract Manager is Owned {
     }
 
     struct RetailerRequirement {
-        // address productID;
-        address retailerID;
+        address retailerAddress;
         bytes32 productName;
         uint256 units;
     }
-    struct ProductRequirement {
-        //address productID;
+    struct ProductRequirement{
         bytes32 productName;
         uint256 units;
     }
-    struct BroadcastRequirement {
-        bytes32 productName;
-        uint256 units; 
-    }
+    // struct BroadcastRequirement{
+    //    bytes32 productName;
+    //     uint256 units; 
+    // }
     
-     mapping(address => ManagerDetails) Managers;
-     mapping(bytes32 => RetailerRequirement) retailerRequirementmap;
-     mapping(bytes32 => ProductRequirement ) productDetails;
-     mapping(bytes32 => BroadcastRequirement) broadcastRequirement;
+    mapping(address => ManagerDetails) Managers;
+    mapping(bytes32 => mapping(address => RetailerRequirement)) CategoryWiseRetailerRequirementRequestes;
+    mapping(bytes32 => uint256 ) ProductCategoryRequirementCount;
+    //  mapping(bytes32 => BroadcastRequirement) broadcastRequirement;
      
     
    
     
-     modifier isManager(address _manager) {
+    function isManager(address _manager) constant public returns(bool){
         if (Managers[_manager].managerAddress == _manager) {
-            assert(true);
+            return true;
+        } else {
+            return false;
         }
-        _;
     }
      
      function addManager(
@@ -175,14 +179,27 @@ contract Manager is Owned {
         return (Managers[_manager].name,Managers[_manager].designation,Managers[_manager].additionalInfo);
     }
     
-    function broadcastProductRequirement(address _retailerID,bytes32 _productName, uint256 _units) public {
+    function broadcastProductRequirement(address _retailerAddress,bytes32 _productName, uint256 _units) public {
+         
         
         RetailerRequirement memory newRetailerRequirement;
-        newRetailerRequirement.retailerID = _retailerID;
+        newRetailerRequirement.retailerAddress = _retailerAddress;
         newRetailerRequirement.productName = _productName;
-        newRetailerRequirement.units += _units;
-        retailerRequirementmap[_productName] = newRetailerRequirement;
-       
+        if (CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units > 0) {
+            newRetailerRequirement.units = CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units + _units;
+        } else {
+            newRetailerRequirement.units = _units;
+        }
+        CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress] = newRetailerRequirement;
+        ProductCategoryRequirementCount[_productName] += newRetailerRequirement.units;
+        RequestPendingRetailerAddressArray.push(_retailerAddress);
+        
+    }
+
+    function productsRequirementFullFill(address _retailerAddress,bytes32 _productName, uint256 _units) public {
+        if (CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units > 0) {
+            CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units -= _units;
+        }        
     }
     
     function viewRequirement(
@@ -190,15 +207,15 @@ contract Manager is Owned {
     )
         public
         constant
-        isManager(msg.sender)
         returns(
-            address retailerID,
-            bytes32 productName,
-            uint256 units
-    
+            address[] retailerID,
+            uint256[] units
         ) {
-       // require(productRequirement[_productName].units != 0);
-        return (retailerRequirementmap[_productName].retailerID,retailerRequirementmap[_productName].productName,retailerRequirementmap[_productName].units);
+        require(isManager(msg.sender));
+        for (uint i = 0 ; i<RequestPendingRetailerAddressArray.length; i++) {
+            units[i] = (CategoryWiseRetailerRequirementRequestes[_productName][RequestPendingRetailerAddressArray[i]].units);
+            retailerID[i] = RequestPendingRetailerAddressArray[i];
+        }
     }
     
 }
@@ -207,7 +224,7 @@ contract Manager is Owned {
 contract OperationTeam is Owned {
     
     Authorizer Auth;
-    // Inventory Invt;
+    Inventory Invt;
     // address WH;
 
     bytes32[] operationTeams;
@@ -261,6 +278,17 @@ contract OperationTeam is Owned {
         // WH = _warehouseContractAddress;
     }
 
+    function setInventoryContractAddress(
+        address _inventoryContractAddress
+    )
+        public
+        onlyOwner
+        returns(
+            bool
+        ) {
+        Invt = Inventory(_inventoryContractAddress);
+    }
+
     function registerOperationTeam(
         address _teamLead,
         address[] _teamMembers,
@@ -292,12 +320,24 @@ contract OperationTeam is Owned {
         }
     }
 
-    function isOprator(bytes32 _operationName,address operationLeadAddress) public constant returns(bool) {
+    function isOperator(bytes32 _operationName,address operationLeadAddress) public constant returns(bool) {
         if (operationDetails[_operationName].teamLead == operationLeadAddress) {
            return true ;
         } else {
             return false;
         }
+    }
+
+    function makeFinalProducts(
+        bytes32 _operationName,
+        bytes32 _inventoryID,
+        uint256 _units
+    )
+        public
+        returns(
+            bool
+        ) {
+        return (Invt.getRawMatrialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMatrialGroupID,operationDetails[_operationName].rawMatrialUnits,operationDetails[_operationName].productDescription));
     }
     // function getRawMatrialsFromInventory(
     //     bytes32 _operationName,
@@ -740,6 +780,7 @@ contract Inventory is Owned {
     function setRawMaterialContractAddress(address rawMatrialContractAddress) public onlyOwner returns(bool) {
          RawMat = RawMatrial(rawMatrialContractAddress);
     }
+
     function setWarehouseContractAddress(address _warehouseContractAddress) public onlyOwner returns(bool) {
         WH = Warehouse(_warehouseContractAddress);
     }
@@ -951,6 +992,7 @@ contract Inventory is Owned {
     // }
 
     function getRawMatrialsFromInventory(
+        address _operationLead,
         bytes32 _operationName,
         bytes32 _inventoryID,
         uint256 _units,
@@ -962,7 +1004,7 @@ contract Inventory is Owned {
         returns(
             bool
         ) {
-        require(opTeam.isOprator(_operationName,msg.sender)); 
+        require(opTeam.isOperator(_operationName,_operationLead)); 
         //require(operationDetails[_operationName].teamLead == msg.sender);
         // require(groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].units >= _units);
         // bytes32[] tempBArray;
@@ -1043,7 +1085,7 @@ contract Inventory is Owned {
             bytes32[] finalProductIDs,
             uint256 unitsAvailable
         ) {
-        require(opTeam.isOprator(_operationName,msg.sender)); 
+        require(opTeam.isOperator(_operationName,msg.sender)); 
         return(finalProductsArray[_operationName].FinalProductIDs,finalProductsArray[_operationName].units);
     }
 
@@ -1057,7 +1099,7 @@ contract Inventory is Owned {
         returns(
             bool
         ) {
-        opTeam.isOprator(_productCategory,msg.sender);
+        opTeam.isOperator(_productCategory,msg.sender);
         require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct);
         if(_sendAllProduct){
             _units = finalProductsArray[_productCategory].units;
@@ -1076,23 +1118,46 @@ contract Inventory is Owned {
             
     }
 
+    function serachFinalProductByID(
+        bytes32 _finalProductID
+    )
+        public
+        constant
+        returns(
+            bytes32 productID,
+            bytes32 productCategory,
+            bytes32[] childs,
+            bytes32 additionalDiscription,
+            uint256 price,
+            bool isConsume
+        ) {
+        require(opTeam.isOperator( manufacturedProducts[_finalProductID].productCategory,msg.sender));
+        return(
+            manufacturedProducts[_finalProductID].productID,
+            manufacturedProducts[_finalProductID].productCategory,
+            manufacturedProducts[_finalProductID].childs,
+            manufacturedProducts[_finalProductID].additionalDiscription,
+            manufacturedProducts[_finalProductID].price,
+            manufacturedProducts[_finalProductID].isConsume
+        );
+
+    }
     // function sendProductsToWarehouse(
     //     bytes32 _operationName,
     //     uint256 _units
     // )
     //     public
     //     returns(bool){
-    //     require(opTeam.isOprator(_operationName,msg.sender)); 
+    //     require(opTeam.isOperator(_operationName,msg.sender)); 
     // }
     //bytes32 rMGid = 
 }
 
 
-contract Warehouse is Owned 
-{
+contract Warehouse is Owned {
     
     Authorizer Auth;
-    Inventory Inv;
+    OperationTeam op;
     Manager Mgr;
     
     bytes32[] tempBytesArray;
@@ -1107,7 +1172,7 @@ contract Warehouse is Owned
     struct ProductInfo
     {
         bytes32 productName;
-        bytes32[] productID;
+        bytes32 productID;
         uint256 price;
         bytes32 warehouseID;
         bool isConsume;
@@ -1149,16 +1214,16 @@ contract Warehouse is Owned
     
     
     
-    function Warehouse(address _authorizerContractAddress, address _inventoryAddress, address _managerAddress) public 
+    function Warehouse(address _authorizerContractAddress, address _operationTeamAddress, address _managerAddress) public 
     {
         Auth = Authorizer(_authorizerContractAddress);
-        Inv = Inventory(_inventoryAddress);
+        op = OperationTeam(_operationTeamAddress);
         Mgr = Manager(_managerAddress);
     }
 
     function registerWarehouse(address _warehouseHead,bytes32 _warehouseName,bytes32 _warehouseCity)public returns(bytes32 _warehouseID)
     {
-        // require(Auth.isRegistrar(msg.sender));
+        require(Auth.isRegistrar(msg.sender));
         _warehouseID = keccak256(_warehouseHead,_warehouseName,_warehouseCity);  
         WarehouseInfo memory newWarehouseInfo;
         newWarehouseInfo.warehouseHead = _warehouseHead;
@@ -1172,11 +1237,12 @@ contract Warehouse is Owned
     
     function registerProduct(bytes32 _productName,bytes32[] _productID,uint256 _productPrice,bytes32 _productWarehouseID) public returns (bool)
     {
-        // require(Auth.isRegistrar(msg.sender));
-    // if()
+        require(op.isOperator(_productName,msg.sender));
+        
+       
         ProductInfo memory newProductInfo;
         newProductInfo.productName = _productName;
-        newProductInfo.productID = _productID;
+        newProductInfo.productID = _productID[0];
         newProductInfo.price = _productPrice;
         newProductInfo.warehouseID = _productWarehouseID;
         product[_productName] = newProductInfo;
@@ -1202,10 +1268,17 @@ contract Warehouse is Owned
         // _productID
         return true;
     }
-        
+    
+    function searchWarehouseDetails(bytes32 _warehouseAddress) returns (bytes32,address,bytes32,bytes32)
+    {
+        require(Mgr.isManager(msg.sender));
+        return(_warehouseAddress, WareHouse[_warehouseAddress].warehouseHead, WareHouse[_warehouseAddress].warehouseName, WareHouse[_warehouseAddress].warehouseCity);
+    }
+
+
     function searchProductDetailsbyName(bytes32 _searchProduct) public constant returns (bytes32 productName, uint price, bytes32 warehouseID, bool isConsume , address retailer)
     {
-        // require(Mgr.isManager(msg.sender));
+        require(Mgr.isManager(msg.sender)); //--------------------------
         return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);  
     }
 
@@ -1214,14 +1287,12 @@ contract Warehouse is Owned
         return ProductsINFO[_productName][_fromWarehouse].units ;
     }
 
-    function requestProductforRetailer(address _retailer, bytes32 _productName, uint256 _units, bytes32 _fromWarehouseID) public returns (bool)
+    function requestProductforRetailer(address _retailer,address _retailerContractAddress, bytes32 _productName, uint256 _units, bytes32 _fromWarehouseID) public returns (bool)
     {
-        // broadcastProductRequirement(_requesterID,_productName,_units);
         bytes32 pendingRequestID  = keccak256(_retailer,_productName,_units);
         if( ProductsINFO[_productName][_fromWarehouseID].units >= _units)
         {
-            SellProductTOretailer(_retailer,_productName,_units, _fromWarehouseID);
-            // newProductRequirement(_requesterID,_productName,_units);
+            SellProductTOretailer(_retailer,_retailerContractAddress ,_productName,_units, _fromWarehouseID);
             return true;
         }
         else
@@ -1234,38 +1305,33 @@ contract Warehouse is Owned
         }
     }
 
-
-
-    // function newProductRequirement(bytes32 _requesterID , bytes32 _productName,uint256 _units) public 
-    // {
-        
-    //     warehouseProductRequirement memory newProductRequirement;
-    //     newProductRequirement.requesterID = _requesterID;
-    //     newProductRequirement.productName = _productName;
-    //     newProductRequirement.units += _units;
-    //     // productRequirment[_productName] = newProductRequirement;
-    //     RequirementMap[_productName] = newProductRequirement;
-    // }
-
     function broadcastProductRequirement(address _requesterID,bytes32 _productName,uint256 _units,bytes32 _pendingRequestID) public
     {
-        // require(Mgr.isManager(msg.sender));
+        require(Mgr.isManager(msg.sender));
         InventoryProductRequirement memory newInventoryProductRequirement;
         newInventoryProductRequirement.requesterID = _requesterID;
         newInventoryProductRequirement.productName = _productName;
         newInventoryProductRequirement.units += _units;
         newInventoryProductRequirement.pendingRequestID = _pendingRequestID;
-        // productRequirment[_productName] = newProductRequirement;
         RequirementMapInv[_productName] = newInventoryProductRequirement;
         emit newProductRequirementOperationTeam( _requesterID,_productName, _units,_pendingRequestID);
     }
 
     function searchWarehouseByProductName(bytes32 _productName) public constant returns(bytes32 _warehouseID)
     {
-        // require(Mgr.isManager(msg.sender));
+        require(Mgr.isManager(msg.sender));
         return product[_productName].warehouseID;
     }
 
+    function searchProductDetailsbyID(bytes32 _productID) returns (bytes32,uint,bytes32,bool,address)
+    {
+        
+        if(product[_productID].productID == _productID)
+        {
+            return(product[_productID].productName, product[_productID].price, product[_productID].warehouseID, product[_productID].isConsume, product[_productID].retailer);
+        }
+        
+    }
 
     function viewProductPendingRequirment(bytes32 _productName, bytes32 _fromWarehouse) external returns (address requesterID, bytes32 requestedProductName, uint units, uint inStock) 
     // uint instock
@@ -1277,7 +1343,7 @@ contract Warehouse is Owned
         // return (productRequirment[_productName].requesterID,productRequirment[_productName].productName,productRequirment[_productName].units);
     }
     
-    function SellProductTOretailer(address _retailer,bytes32 _productName,uint _units, bytes32 _fromWarehouseID) public returns (bytes32)
+    function SellProductTOretailer(address _retailer,address _retailerContractAddress, bytes32 _productName,uint _units, bytes32 _fromWarehouseID) public returns (bytes32)
     {
         // require(Auth.isValidator(msg.sender));
         // require(RequirementMap[_productName].units <= ProductsINFO[_productName][_fromWarehouseID].units);
@@ -1290,13 +1356,15 @@ contract Warehouse is Owned
                 // ProductsINFO[_productName][_fromWarehouseID].productIDS[i].isConsume == true;
                 // ProductsINFO[_productName][_fromWarehouseID].productIDS[i].retailer == _retailer;
                 ProductsINFO[_productName][_fromWarehouseID].units -= 1;
+                Retailer ret = Retailer(_retailerContractAddress);
+                ret.recieveProduct(ProductsINFO[_productName][_fromWarehouseID].productIDs[i],_retailer,_productName,product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].price);
+                delete(ProductsINFO[_productName][_fromWarehouseID].productIDs[i]);
             }
         }
         bytes32 SellOrderID = keccak256(_retailer,_productName,_units,_fromWarehouseID);
         emit SellOrderDetails( _retailer,_productName,_units,_fromWarehouseID);              
         return SellOrderID;
     }
-    
 
 }
 
@@ -1316,6 +1384,7 @@ contract Retailer is Owned {
         bytes32 category;
         uint256 price;
         address retailerAddress;
+        bool isConsume;
     }
     
     mapping(address => RetailerDetails) RetailerList;
@@ -1403,7 +1472,7 @@ contract Retailer is Owned {
         public
         constant
         returns(
-            bytes32[] _productID,
+            bytes32[] ProductID,
             uint256 units
         ) {
         return (
@@ -1422,13 +1491,15 @@ contract Retailer is Owned {
             bytes32 ProductID,
             bytes32 ProductCategory,
             uint256 ProductPrice,
-            address ProductOwner
+            address ProductOwner,
+            bool SoldOut
         ) {
         return(
             ProductDetails[_productID].productID,
             ProductDetails[_productID].category,
             ProductDetails[_productID].price,
-            ProductDetails[_productID].retailerAddress
+            ProductDetails[_productID].retailerAddress,
+            ProductDetails[_productID].isConsume
             );
     }
 

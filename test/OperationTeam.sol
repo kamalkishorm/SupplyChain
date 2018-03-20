@@ -1,6 +1,7 @@
 pragma solidity ^0.4.18;
 import './Authorizer.sol';
 import './Owned.sol';
+import './Inventory.sol';
 
 contract OperationTeam is Owned {
     
@@ -60,15 +61,16 @@ contract OperationTeam is Owned {
     }
 
     function setInventoryContractAddress(
-        bytes32 _inventoryContractAddress
+        address _inventoryContractAddress
     )
         public
         onlyOwner
         returns(
             bool
         ) {
-         Invt = Inventory(_inventoryContractAddress);
+        Invt = Inventory(_inventoryContractAddress);
     }
+    
     function registerOperationTeam(
         address _teamLead,
         address[] _teamMembers,
@@ -117,7 +119,7 @@ contract OperationTeam is Owned {
         returns(
             bool
         ) {
-        return (Inv.getRawMatrialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMatrialGroupID,operationDetails[_operationName].rawMatrialUnits,operationDetails[_operationName].productDescription));
+        return (Invt.getRawMatrialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMatrialGroupID,operationDetails[_operationName].rawMatrialUnits,operationDetails[_operationName].productDescription));
     }
     // function getRawMatrialsFromInventory(
     //     bytes32 _operationName,

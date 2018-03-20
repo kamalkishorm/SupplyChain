@@ -1,8 +1,11 @@
 pragma solidity ^0.4.18;
 import './Owned.sol';
 import './Retailer.sol';
+import './Authorizer.sol';
 
 contract Manager is Owned {
+    
+    Authorizer Auth;
     
     bytes32[] tempBytesArray;
     bytes32[] tempUintArray;
@@ -25,22 +28,33 @@ contract Manager is Owned {
         bytes32 productName;
         uint256 units;
     }
+    
+    function Manager (address _authAddress) public
+    {
+        Auth = Authorizer(_authAddress);
+    }
+    
+    function isManager(address _managerAddress) public constant returns(bool) 
+    {
+        if (ManagerInfo[_managerAddress].managerAddress == _managerAddress) 
+        {
+           return true ;
+        }
+        else 
+        {
+            return false;
+        }
+    }
     // struct BroadcastRequirement {
     //     bytes32 productName;
     //     uint256 units; 
     // }
     
-    mapping(address => ManagerDetails) Managers;
+    mapping(address => ManagerDetails) ManagerInfo;
     mapping(bytes32 => mapping(address => RetailerRequirement)) CategoryWiseRetailerRequirementRequestes;
     mapping(bytes32 => uint256 ) ProductCategoryRequirementCount;
     // mapping(bytes32 => BroadcastRequirement) broadcastRequirement;
     
-    modifier isManager(address _manager) {
-        if (Managers[_manager].managerAddress == _manager) {
-            assert(true);
-        }
-        _;
-    }
      
     function addManager(
         address _manager, 
@@ -56,7 +70,7 @@ contract Manager is Owned {
         newManager.name = _name;
         newManager.designation = _designation;
         newManager.additionalInfo = _additionalInfo;
-        Managers[_manager] = newManager;
+        ManagerInfo[_manager] = newManager;
     }
     
     function viewManager(
@@ -70,7 +84,7 @@ contract Manager is Owned {
             bytes32 additionalInfo
         ) {
         require(msg.sender == owner || msg.sender == _manager);
-        return (Managers[_manager].name,Managers[_manager].designation,Managers[_manager].additionalInfo);
+        return (ManagerInfo[_manager].name,ManagerInfo[_manager].designation,ManagerInfo[_manager].additionalInfo);
     }
     
     function broadcastProductRequirement(address _retailerAddress,bytes32 _productName, uint256 _units) public {
@@ -90,22 +104,17 @@ contract Manager is Owned {
         
     }
     
-    function productsRequirementFullFill(address _retailerAddress,bytes32 _productName, uint256 _units) public {
+    function productsRequirementFullFilled(address _managerAddress,address _retailerAddress,bytes32 _productName, uint256 _units) public returns(bool){
+        require(isManager(_managerAddress));
         if (CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units > 0) {
             CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units -= _units;
+            return true;
         }        
     }
 
-    function viewRequirement(
-        bytes32 _productName
-    )
-        public
-        constant
-        isManager(msg.sender)
-        returns(
-            address[] retailerID,
-            uint256[] units
-        ) {
+    function viewRequirement( bytes32 _productName) public constant returns(address[] retailerID, uint256[] units)
+    {
+        require(isManager(msg.sender));
         for (uint i = 0 ; i<RequestPendingRetailerAddressArray.length; i++) {
             units[i] = (CategoryWiseRetailerRequirementRequestes[_productName][RequestPendingRetailerAddressArray[i]].units);
             retailerID[i] = RequestPendingRetailerAddressArray[i];
