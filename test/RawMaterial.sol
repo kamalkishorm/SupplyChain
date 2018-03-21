@@ -29,10 +29,10 @@ contract RawMaterial is Owned {
         bool isConsume;     
     }
 
-    struct RawMaterialInfoOwnersDetails {
-        bytes32 name;
-        bytes32 companyName;
-    }
+    // struct RawMaterialInfoOwnersDetails {
+    //     bytes32 name;
+    //     bytes32 companyName;
+    // }
 
     struct ProductGroupIDRequirement {
         bytes32 inventoryID;
@@ -47,13 +47,14 @@ contract RawMaterial is Owned {
 
     mapping(address => Supplier) SupplierDetails;
     mapping(bytes32 => RawMaterialInfo) RawMaterialMapping;
-    mapping(address => RawMaterialInfoOwnersDetails) owners;
-    mapping(bytes32 => ProductGroupIDRequirement) groupIdRequirement;
+    // mapping(address => RawMaterialInfoOwnersDetails) owners;
+    mapping(bytes32 => mapping(bytes32 => ProductGroupIDRequirement)) groupIdRequirement;
+    mapping(bytes32 => bytes32[]) groupIdInventoryArrayForReq;
     mapping(bytes32 => mapping(address =>RawMatarialsArray)) groupIDWithSupplierRawMatarialsArray;
 
     event SupplierRegistered(bytes32 name,bytes32 city,address suplierAddress);
     event SupplierAlreadyRegistered(bytes32 name,bytes32 city,address suplierAddress);
-    event RawMaterialRegistered(bytes32 rawMaterialID,bytes32 groupID, address supplier);
+    event RawMaterialRegistered(bytes32[] rawMaterialID,uint256 units,bytes32 groupID, address supplier);
     event RawMatarialOwnershipTransfered(address oldSupplier,address newSupplier,bytes32[] rawMatrilIDs);
     event RawMaterialRequirement(bytes32 groupID,uint256 units,uint256 pricePerUnit,bytes32 inventoryID);
     event OrderTransfer(bytes32 groupID,uint256 units,bytes32 inventoryID);
@@ -71,7 +72,6 @@ contract RawMaterial is Owned {
         public 
         {
         Auth = Authorizer(authorizerContractAddress);
-        
     }
     
     function setInventoryContractAddress(address inventoryContractAddress) public onlyOwner returns(bool) {
@@ -118,40 +118,56 @@ contract RawMaterial is Owned {
         bytes32 _name,
         bytes32 _groupID,
         address _supplier,
-        bytes32 _additionalDiscription
+        bytes32 _additionalDiscription,
+        uint256 _units
     )
         isSupplier(_supplier)
         public
         returns(bytes32) 
         {
         require(Auth.isRegistrar(msg.sender));
-        bytes32 _rawMaterialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp);
-
-        RawMaterialInfo memory newRawMaterialInfo;
-        newRawMaterialInfo.name = _name;
-        newRawMaterialInfo.groupID = _groupID;
-        newRawMaterialInfo.supplier = _supplier;
-        newRawMaterialInfo.additionalDiscription = _additionalDiscription;
-        // newRawMaterialInfo.price = _price;
-        newRawMaterialInfo.rawMaterialID = _rawMaterialID;
-        RawMaterialMapping[_rawMaterialID] = newRawMaterialInfo;
 
         if (groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs.length > 0) {
-            groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += 1;
             tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs;
-            tempBytesArray.push(_rawMaterialID);
-            groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
-            // delete(tempBytesArray);
-            // groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         } else {
             RawMatarialsArray memory newRawMatarialsArray;
-            newRawMatarialsArray.units += 1;
-            tempBytesArray.push(_rawMaterialID);
-            newRawMatarialsArray.rawMaterialsIDs = tempBytesArray;
             groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
+            delete(tempBytesArray);
         }
-        delete(tempBytesArray);
-        emit RawMaterialRegistered(_rawMaterialID,_groupID,_supplier);
+
+        for (uint i = 0 ; i< _units; i++){
+            bytes32 _rawMaterialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp,i);
+
+            RawMaterialInfo memory newRawMaterialInfo;
+            newRawMaterialInfo.name = _name;
+            newRawMaterialInfo.groupID = _groupID;
+            newRawMaterialInfo.supplier = _supplier;
+            newRawMaterialInfo.additionalDiscription = _additionalDiscription;
+            // newRawMaterialInfo.price = _price;
+            newRawMaterialInfo.rawMaterialID = _rawMaterialID;
+            RawMaterialMapping[_rawMaterialID] = newRawMaterialInfo; 
+            tempBytesArray.push(_rawMaterialID);         
+        }
+        groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += _units;
+        groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
+
+        // if (groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs.length > 0) {
+        //     groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += 1;
+        //     tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs;
+        //     tempBytesArray.push(_rawMaterialID);
+        //     groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
+        //     // delete(tempBytesArray);
+        //     // groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
+        //     } else {
+        //         RawMatarialsArray memory newRawMatarialsArray;
+        //         newRawMatarialsArray.units += 1;
+        //         tempBytesArray.push(_rawMaterialID);
+        //         newRawMatarialsArray.rawMaterialsIDs = tempBytesArray;
+        //         groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
+        //     }
+        //     delete(tempBytesArray);
+        
+        emit RawMaterialRegistered(tempBytesArray,_units,_groupID,_supplier);
         return(_rawMaterialID);
     }
 
@@ -228,13 +244,24 @@ contract RawMaterial is Owned {
     )
         public
         {
-        ProductGroupIDRequirement memory newProductGroupIDRequirement;
-        // if(groupIdRequirement[_groupID].units == 0) {
+        if(groupIdRequirement[_groupID][_inventoryID].units>0){
+            groupIdRequirement[_groupID][_inventoryID].units += _units;
+        } else {
+            ProductGroupIDRequirement memory newProductGroupIDRequirement;
             newProductGroupIDRequirement.inventoryID = _inventoryID;
             newProductGroupIDRequirement.units += _units;
             newProductGroupIDRequirement.pricePerUnit += _pricePerUnit;
-            groupIdRequirement[_groupID] = newProductGroupIDRequirement;
-        // }
+            groupIdRequirement[_groupID][_inventoryID] = newProductGroupIDRequirement;
+            bool f =true;
+            for(uint i = 0 ;i<groupIdInventoryArrayForReq[_groupID].length;i++) {
+                if(groupIdInventoryArrayForReq[_groupID][i] == _inventoryID) {
+                    f = false;
+                }
+            }
+            if(f){
+                groupIdInventoryArrayForReq[_groupID].push(_inventoryID);
+            }
+        }
         emit RawMaterialRequirement(_groupID,_units,_pricePerUnit,_inventoryID);
     }
 
@@ -245,12 +272,22 @@ contract RawMaterial is Owned {
         constant
         isSupplier(msg.sender)
         returns(
-            bytes32 inventoryID,
-            uint256 units,
+            bytes32[] inventoryID,
+            uint256[] units,
+            uint256[] pricePerUnit,
             uint256 inStock
         ) {
-        require(groupIdRequirement[_groupID].units != 0);
-        return (groupIdRequirement[_groupID].inventoryID,groupIdRequirement[_groupID].units,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
+        require(groupIdInventoryArrayForReq[_groupID].length > 0);
+        bytes32[] memory tempBytes = new bytes32[](groupIdInventoryArrayForReq[_groupID].length);
+        uint256[] memory tempUnit = new uint256[](groupIdInventoryArrayForReq[_groupID].length);
+        uint256[] memory tempUnitP = new uint256[](groupIdInventoryArrayForReq[_groupID].length);
+        
+        for(uint i = 0; i<groupIdInventoryArrayForReq[_groupID].length;i++){
+            tempBytes[i] = groupIdInventoryArrayForReq[_groupID][i];
+            tempUnit[i] = groupIdRequirement[_groupID][groupIdInventoryArrayForReq[_groupID][i]].units;
+            tempUnitP[i] = groupIdRequirement[_groupID][groupIdInventoryArrayForReq[_groupID][i]].pricePerUnit;
+        }
+        return (tempBytes,tempUnit,tempUnitP,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
     }
 
     function sendSellOrder(
@@ -260,11 +297,11 @@ contract RawMaterial is Owned {
         public
         isSupplier(msg.sender)
         {
-        require(groupIdRequirement[_groupID].units <= groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
+        require(groupIdRequirement[_groupID][_inventoryID].units <= groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
         
-        for (uint i = 0; i < groupIdRequirement[_groupID].units ; i++) {
+        for (uint i = 0; i < groupIdRequirement[_groupID][_inventoryID].units ; i++) {
         bytes32 id = groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].rawMaterialsIDs[i];
-        if (groupIdRequirement[_groupID].inventoryID==_inventoryID) {
+        if (groupIdRequirement[_groupID][_inventoryID].inventoryID==_inventoryID) {
             Invt.recieveRawMatarials(
                 RawMaterialMapping[id].rawMaterialID,
                 // RawMaterialMapping[id].parent,
@@ -274,16 +311,22 @@ contract RawMaterial is Owned {
                 RawMaterialMapping[id].supplier,
                 // RawMaterialMapping[id].childs,
                 RawMaterialMapping[id].additionalDiscription,
-                groupIdRequirement[_groupID].pricePerUnit,
-                groupIdRequirement[_groupID].inventoryID
+                groupIdRequirement[_groupID][_inventoryID].pricePerUnit,
+                groupIdRequirement[_groupID][_inventoryID].inventoryID
             );
         // delete(RawMaterialMapping[id]);
         RawMaterialMapping[id].isConsume = true;
         }
         }
-        delete(groupIdRequirement[_groupID]);
-        groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID].units;
-        emit OrderTransfer(_groupID,groupIdRequirement[_groupID].units,_inventoryID);
+        groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID][_inventoryID].units;
+        delete(groupIdRequirement[_groupID][_inventoryID]);
+        for (uint j = 0 ;j< groupIdInventoryArrayForReq[_groupID].length ; j++){
+            if(groupIdInventoryArrayForReq[_groupID][j] == _inventoryID){
+                delete(groupIdInventoryArrayForReq[_groupID][j]);
+                break;
+            }
+        }
+        emit OrderTransfer(_groupID,groupIdRequirement[_groupID][_inventoryID].units,_inventoryID);
     }
 
 }

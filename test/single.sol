@@ -105,7 +105,9 @@ contract Authorizer is Owned {
 
 
 contract Manager is Owned {
-
+    
+    Authorizer Auth;
+    
     bytes32[] tempBytesArray;
     bytes32[] tempUintArray;
     
@@ -123,46 +125,53 @@ contract Manager is Owned {
         bytes32 productName;
         uint256 units;
     }
-    struct ProductRequirement{
+    struct ProductRequirement {
         bytes32 productName;
         uint256 units;
     }
-    // struct BroadcastRequirement{
-    //    bytes32 productName;
-    //     uint256 units; 
-    // }
     
-    mapping(address => ManagerDetails) Managers;
-    mapping(bytes32 => mapping(address => RetailerRequirement)) CategoryWiseRetailerRequirementRequestes;
-    mapping(bytes32 => uint256 ) ProductCategoryRequirementCount;
-    //  mapping(bytes32 => BroadcastRequirement) broadcastRequirement;
-     
+    function Manager (address _authAddress) public
+    {
+        Auth = Authorizer(_authAddress);
+    }
     
-   
-    
-    function isManager(address _manager) constant public returns(bool){
-        if (Managers[_manager].managerAddress == _manager) {
+    function isManager(address _managerAddress) public constant returns(bool) 
+    {
+        if (ManagerInfo[_managerAddress].managerAddress == _managerAddress) 
+        {
             return true;
-        } else {
+        }
+        else 
+        {
             return false;
         }
     }
+    // struct BroadcastRequirement {
+    //     bytes32 productName;
+    //     uint256 units; 
+    // }
+    
+    mapping(address => ManagerDetails) ManagerInfo;
+    mapping(bytes32 => mapping(address => RetailerRequirement)) CategoryWiseRetailerRequirementRequestes;
+    mapping(bytes32 => uint256 ) ProductCategoryRequirementCount;
+    // mapping(bytes32 => BroadcastRequirement) broadcastRequirement;
+    
      
-     function addManager(
+    function addManager(
         address _manager, 
         bytes32 _name, 
         bytes32 _designation, 
         bytes32 _additionalInfo
     )
-        onlyOwner 
-        public
+        public 
         {
-            ManagerDetails memory newManager;
-            newManager.managerAddress = _manager;
-            newManager.name = _name;
-            newManager.designation = _designation;
-            newManager.additionalInfo = _additionalInfo;
-            Managers[_manager] = newManager;
+        require(Auth.isRegistrar(msg.sender));
+        ManagerDetails memory newManager;
+        newManager.managerAddress = _manager;
+        newManager.name = _name;
+        newManager.designation = _designation;
+        newManager.additionalInfo = _additionalInfo;
+        ManagerInfo[_manager] = newManager;
     }
     
     function viewManager(
@@ -176,7 +185,7 @@ contract Manager is Owned {
             bytes32 additionalInfo
         ) {
         require(msg.sender == owner || msg.sender == _manager);
-        return (Managers[_manager].name,Managers[_manager].designation,Managers[_manager].additionalInfo);
+        return (ManagerInfo[_manager].name,ManagerInfo[_manager].designation,ManagerInfo[_manager].additionalInfo);
     }
     
     function broadcastProductRequirement(address _retailerAddress,bytes32 _productName, uint256 _units) public {
@@ -195,28 +204,24 @@ contract Manager is Owned {
         RequestPendingRetailerAddressArray.push(_retailerAddress);
         
     }
-
-    function productsRequirementFullFill(address _retailerAddress,bytes32 _productName, uint256 _units) public {
+    
+    function productsRequirementFullFilled(address _managerAddress,address _retailerAddress,bytes32 _productName, uint256 _units) constant public returns(bool){
+        require(isManager(_managerAddress));
         if (CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units > 0) {
             CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units -= _units;
+            return true;
         }        
     }
-    
-    function viewRequirement(
-        bytes32 _productName
-    )
-        public
-        constant
-        returns(
-            address[] retailerID,
-            uint256[] units
-        ) {
+
+    function viewRequirement( bytes32 _productName) public constant returns(address[] retailerID, uint256[] units)
+    {
         require(isManager(msg.sender));
         for (uint i = 0 ; i<RequestPendingRetailerAddressArray.length; i++) {
             units[i] = (CategoryWiseRetailerRequirementRequestes[_productName][RequestPendingRetailerAddressArray[i]].units);
             retailerID[i] = RequestPendingRetailerAddressArray[i];
         }
     }
+
     
 }
 
@@ -288,7 +293,7 @@ contract OperationTeam is Owned {
         ) {
         Invt = Inventory(_inventoryContractAddress);
     }
-
+    
     function registerOperationTeam(
         address _teamLead,
         address[] _teamMembers,
@@ -322,7 +327,7 @@ contract OperationTeam is Owned {
 
     function isOperator(bytes32 _operationName,address operationLeadAddress) public constant returns(bool) {
         if (operationDetails[_operationName].teamLead == operationLeadAddress) {
-           return true ;
+            return true;
         } else {
             return false;
         }
@@ -400,7 +405,7 @@ contract RawMaterial is Owned {
         // bytes32 parent;
         bytes32 name;
         bytes32 groupID;
-        address currentOwner;
+        // address currentOwner;
         address supplier;
         // bytes32[] childs;
         bytes32 additionalDiscription;
@@ -409,10 +414,10 @@ contract RawMaterial is Owned {
         bool isConsume;     
     }
 
-    struct RawMaterialInfoOwnersDetails {
-        bytes32 name;
-        bytes32 companyName;
-    }
+    // struct RawMaterialInfoOwnersDetails {
+    //     bytes32 name;
+    //     bytes32 companyName;
+    // }
 
     struct ProductGroupIDRequirement {
         bytes32 inventoryID;
@@ -427,13 +432,14 @@ contract RawMaterial is Owned {
 
     mapping(address => Supplier) SupplierDetails;
     mapping(bytes32 => RawMaterialInfo) RawMaterialMapping;
-    mapping(address => RawMaterialInfoOwnersDetails) owners;
-    mapping(bytes32 => ProductGroupIDRequirement) groupIdRequirement;
+    // mapping(address => RawMaterialInfoOwnersDetails) owners;
+    mapping(bytes32 => mapping(bytes32 => ProductGroupIDRequirement)) groupIdRequirement;
+    mapping(bytes32 => bytes32[]) groupIdInventoryArrayForReq;
     mapping(bytes32 => mapping(address =>RawMatarialsArray)) groupIDWithSupplierRawMatarialsArray;
 
     event SupplierRegistered(bytes32 name,bytes32 city,address suplierAddress);
     event SupplierAlreadyRegistered(bytes32 name,bytes32 city,address suplierAddress);
-    event RawMaterialRegistered(bytes32 rawMaterialID,bytes32 groupID, address supplier);
+    event RawMaterialRegistered(bytes32[] rawMaterialID,uint256 units,bytes32 groupID, address supplier);
     event RawMatarialOwnershipTransfered(address oldSupplier,address newSupplier,bytes32[] rawMatrilIDs);
     event RawMaterialRequirement(bytes32 groupID,uint256 units,uint256 pricePerUnit,bytes32 inventoryID);
     event OrderTransfer(bytes32 groupID,uint256 units,bytes32 inventoryID);
@@ -451,7 +457,6 @@ contract RawMaterial is Owned {
         public 
         {
         Auth = Authorizer(authorizerContractAddress);
-        
     }
     
     function setInventoryContractAddress(address inventoryContractAddress) public onlyOwner returns(bool) {
@@ -498,57 +503,73 @@ contract RawMaterial is Owned {
         bytes32 _name,
         bytes32 _groupID,
         address _supplier,
-        bytes32 _additionalDiscription
+        bytes32 _additionalDiscription,
+        uint256 _units
     )
         isSupplier(_supplier)
         public
         returns(bytes32) 
         {
         require(Auth.isRegistrar(msg.sender));
-        bytes32 _rawMaterialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp);
-
-        RawMaterialInfo memory newRawMaterialInfo;
-        newRawMaterialInfo.name = _name;
-        newRawMaterialInfo.groupID = _groupID;
-        newRawMaterialInfo.supplier = _supplier;
-        newRawMaterialInfo.additionalDiscription = _additionalDiscription;
-        // newRawMaterialInfo.price = _price;
-        newRawMaterialInfo.rawMaterialID = _rawMaterialID;
-        RawMaterialMapping[_rawMaterialID] = newRawMaterialInfo;
 
         if (groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs.length > 0) {
-            groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += 1;
             tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs;
-            tempBytesArray.push(_rawMaterialID);
-            groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
-            // delete(tempBytesArray);
-            // groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         } else {
             RawMatarialsArray memory newRawMatarialsArray;
-            newRawMatarialsArray.units += 1;
-            tempBytesArray.push(_rawMaterialID);
-            newRawMatarialsArray.rawMaterialsIDs = tempBytesArray;
             groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
+            delete(tempBytesArray);
         }
-        delete(tempBytesArray);
-        emit RawMaterialRegistered(_rawMaterialID,_groupID,_supplier);
+
+        for (uint i = 0 ; i< _units; i++){
+            bytes32 _rawMaterialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp,i);
+
+            RawMaterialInfo memory newRawMaterialInfo;
+            newRawMaterialInfo.name = _name;
+            newRawMaterialInfo.groupID = _groupID;
+            newRawMaterialInfo.supplier = _supplier;
+            newRawMaterialInfo.additionalDiscription = _additionalDiscription;
+            // newRawMaterialInfo.price = _price;
+            newRawMaterialInfo.rawMaterialID = _rawMaterialID;
+            RawMaterialMapping[_rawMaterialID] = newRawMaterialInfo; 
+            tempBytesArray.push(_rawMaterialID);         
+        }
+        groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += _units;
+        groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
+
+        // if (groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs.length > 0) {
+        //     groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += 1;
+        //     tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs;
+        //     tempBytesArray.push(_rawMaterialID);
+        //     groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
+        //     // delete(tempBytesArray);
+        //     // groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
+        //     } else {
+        //         RawMatarialsArray memory newRawMatarialsArray;
+        //         newRawMatarialsArray.units += 1;
+        //         tempBytesArray.push(_rawMaterialID);
+        //         newRawMatarialsArray.rawMaterialsIDs = tempBytesArray;
+        //         groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
+        //     }
+        //     delete(tempBytesArray);
+        
+        emit RawMaterialRegistered(tempBytesArray,_units,_groupID,_supplier);
         return(_rawMaterialID);
     }
 
-    function transferRawMaterialInfoOwnerShip(
-        address _newOwner,
-        bytes32[] rawMaterialIDs
-    )
-        isSupplier(msg.sender)
-        public
-        {
-        for (uint i = 0; i < rawMaterialIDs.length;i++) {
-            if (RawMaterialMapping[rawMaterialIDs[i]].currentOwner == msg.sender) {
-                RawMaterialMapping[rawMaterialIDs[i]].currentOwner = _newOwner;
-            }
-        }
-        emit RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMaterialIDs);
-    }
+    // function transferRawMaterialInfoOwnerShip(
+    //     address _newOwner,
+    //     bytes32[] rawMaterialIDs
+    // )
+    //     isSupplier(msg.sender)
+    //     public
+    //     {
+    //     for (uint i = 0; i < rawMaterialIDs.length;i++) {
+    //         if (RawMaterialMapping[rawMaterialIDs[i]].currentOwner == msg.sender) {
+    //             RawMaterialMapping[rawMaterialIDs[i]].currentOwner = _newOwner;
+    //         }
+    //     }
+    //     emit RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMaterialIDs);
+    // }
 
     function viewRawMaterialInfoByID( 
         bytes32 _rawMaterialID
@@ -559,18 +580,20 @@ contract RawMaterial is Owned {
             // bytes32 parent,
             bytes32 name,
             bytes32 groupID,
-            address currentOwner,
+            // address currentOwner,
             address supplier,
             // bytes32[] childs,
-            bytes32 additionalDiscription
+            bytes32 additionalDiscription,
+            bool isConsume
         ) {
             return (
             RawMaterialMapping[_rawMaterialID].name,
             RawMaterialMapping[_rawMaterialID].groupID,
-            RawMaterialMapping[_rawMaterialID].currentOwner,
+            // RawMaterialMapping[_rawMaterialID].currentOwner,
             RawMaterialMapping[_rawMaterialID].supplier,
             // RawMaterialMapping[_rawMaterialID].childs,
-            RawMaterialMapping[_rawMaterialID].additionalDiscription
+            RawMaterialMapping[_rawMaterialID].additionalDiscription,
+            RawMaterialMapping[_rawMaterialID].isConsume            
             // RawMaterialMapping[_rawMaterialID].price
         );
     }
@@ -606,13 +629,24 @@ contract RawMaterial is Owned {
     )
         public
         {
-        ProductGroupIDRequirement memory newProductGroupIDRequirement;
-        // if(groupIdRequirement[_groupID].units == 0) {
+        if(groupIdRequirement[_groupID][_inventoryID].units>0){
+            groupIdRequirement[_groupID][_inventoryID].units += _units;
+        } else {
+            ProductGroupIDRequirement memory newProductGroupIDRequirement;
             newProductGroupIDRequirement.inventoryID = _inventoryID;
             newProductGroupIDRequirement.units += _units;
             newProductGroupIDRequirement.pricePerUnit += _pricePerUnit;
-            groupIdRequirement[_groupID] = newProductGroupIDRequirement;
-        // }
+            groupIdRequirement[_groupID][_inventoryID] = newProductGroupIDRequirement;
+            bool f =true;
+            for(uint i = 0 ;i<groupIdInventoryArrayForReq[_groupID].length;i++) {
+                if(groupIdInventoryArrayForReq[_groupID][i] == _inventoryID) {
+                    f = false;
+                }
+            }
+            if(f){
+                groupIdInventoryArrayForReq[_groupID].push(_inventoryID);
+            }
+        }
         emit RawMaterialRequirement(_groupID,_units,_pricePerUnit,_inventoryID);
     }
 
@@ -623,12 +657,22 @@ contract RawMaterial is Owned {
         constant
         isSupplier(msg.sender)
         returns(
-            bytes32 inventoryID,
-            uint256 units,
+            bytes32[] inventoryID,
+            uint256[] units,
+            uint256[] pricePerUnit,
             uint256 inStock
         ) {
-        require(groupIdRequirement[_groupID].units != 0);
-        return (groupIdRequirement[_groupID].inventoryID,groupIdRequirement[_groupID].units,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
+        require(groupIdInventoryArrayForReq[_groupID].length > 0);
+        bytes32[] memory tempBytes = new bytes32[](groupIdInventoryArrayForReq[_groupID].length);
+        uint256[] memory tempUnit = new uint256[](groupIdInventoryArrayForReq[_groupID].length);
+        uint256[] memory tempUnitP = new uint256[](groupIdInventoryArrayForReq[_groupID].length);
+        
+        for(uint i = 0; i<groupIdInventoryArrayForReq[_groupID].length;i++){
+            tempBytes[i] = groupIdInventoryArrayForReq[_groupID][i];
+            tempUnit[i] = groupIdRequirement[_groupID][groupIdInventoryArrayForReq[_groupID][i]].units;
+            tempUnitP[i] = groupIdRequirement[_groupID][groupIdInventoryArrayForReq[_groupID][i]].pricePerUnit;
+        }
+        return (tempBytes,tempUnit,tempUnitP,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
     }
 
     function sendSellOrder(
@@ -638,11 +682,11 @@ contract RawMaterial is Owned {
         public
         isSupplier(msg.sender)
         {
-        require(groupIdRequirement[_groupID].units <= groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
+        require(groupIdRequirement[_groupID][_inventoryID].units <= groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
         
-        for (uint i = 0; i < groupIdRequirement[_groupID].units ; i++) {
+        for (uint i = 0; i < groupIdRequirement[_groupID][_inventoryID].units ; i++) {
         bytes32 id = groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].rawMaterialsIDs[i];
-        if (groupIdRequirement[_groupID].inventoryID==_inventoryID) {
+        if (groupIdRequirement[_groupID][_inventoryID].inventoryID==_inventoryID) {
             Invt.recieveRawMatarials(
                 RawMaterialMapping[id].rawMaterialID,
                 // RawMaterialMapping[id].parent,
@@ -652,16 +696,22 @@ contract RawMaterial is Owned {
                 RawMaterialMapping[id].supplier,
                 // RawMaterialMapping[id].childs,
                 RawMaterialMapping[id].additionalDiscription,
-                groupIdRequirement[_groupID].pricePerUnit,
-                groupIdRequirement[_groupID].inventoryID
+                groupIdRequirement[_groupID][_inventoryID].pricePerUnit,
+                groupIdRequirement[_groupID][_inventoryID].inventoryID
             );
         // delete(RawMaterialMapping[id]);
         RawMaterialMapping[id].isConsume = true;
         }
         }
-        delete(groupIdRequirement[_groupID]);
-        groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID].units;
-        emit OrderTransfer(_groupID,groupIdRequirement[_groupID].units,_inventoryID);
+        groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID][_inventoryID].units;
+        delete(groupIdRequirement[_groupID][_inventoryID]);
+        for (uint j = 0 ;j< groupIdInventoryArrayForReq[_groupID].length ; j++){
+            if(groupIdInventoryArrayForReq[_groupID][j] == _inventoryID){
+                delete(groupIdInventoryArrayForReq[_groupID][j]);
+                break;
+            }
+        }
+        emit OrderTransfer(_groupID,groupIdRequirement[_groupID][_inventoryID].units,_inventoryID);
     }
 
 }
@@ -745,6 +795,7 @@ contract Inventory is Owned {
     
     event InventoryRegistered(bytes32 inventoryID,bytes32 name,bytes32 city);
     event InventoryAlreadyRegistered(bytes32 inventoryID,bytes32 name, bytes32 city);
+    event newFinalProductCreated(bytes32 FinalProdcutID,bytes32 Category);
 
     modifier isInventor(bytes32 _inventoryID) {
         if (InventoryStore[_inventoryID].inventoryHead != msg.sender) {
@@ -780,7 +831,7 @@ contract Inventory is Owned {
     function setRawMaterialContractAddress(address rawMaterialContractAddress) public onlyOwner returns(bool) {
          RawMat = RawMaterial(rawMaterialContractAddress);
     }
-
+    
     function setWarehouseContractAddress(address _warehouseContractAddress) public onlyOwner returns(bool) {
         WH = Warehouse(_warehouseContractAddress);
     }
@@ -992,7 +1043,7 @@ contract Inventory is Owned {
     // }
 
     function getRawMaterialsFromInventory(
-        address _operationLead,
+        address _opTeamLead,
         bytes32 _operationName,
         bytes32 _inventoryID,
         uint256 _units,
@@ -1004,7 +1055,7 @@ contract Inventory is Owned {
         returns(
             bool
         ) {
-        require(opTeam.isOperator(_operationName,_operationLead)); 
+        require(opTeam.isOperator(_operationName,_opTeamLead)); 
         //require(operationDetails[_operationName].teamLead == msg.sender);
         // require(groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].units >= _units);
         // bytes32[] tempBArray;
@@ -1026,7 +1077,7 @@ contract Inventory is Owned {
             //     // }
             //     // groupIDWithInventoryProductsArray[rMGid][_inventoryID].units -= _rawMaterialUnits[i];
             // }
-            bytes32 _productID = keccak256(_operationName,block.timestamp);
+            bytes32 _productID = keccak256(_operationName,block.timestamp,k);
             FinalProduct memory newFinalProduct;
             newFinalProduct.productID = _productID;
             // newFinalProduct.parent = "Final Product";
@@ -1034,15 +1085,16 @@ contract Inventory is Owned {
             // newFinalProduct.childs = tempBytesArray;
             newFinalProduct.additionalDiscription = _productDescription;
             // newFinalProduct.price = _priceCalculated;
+            manufacturedProducts[_productID] = newFinalProduct;            
             if (getRawForFinalProduct(_inventoryID,_rawMaterialGroupID,_rawMaterialUnits,_productID)) {
-                manufacturedProducts[_productID] = newFinalProduct;
                 finalProductsArray[_operationName].units += 1;
                 finalProductsArray[_operationName].FinalProductIDs.push(_productID);
-                return true;
+                newFinalProductCreated(_productID,_operationName);
             } else {
                 return false;
             }
         }
+        return true;
     }
 
     function getRawForFinalProduct(
@@ -1062,7 +1114,7 @@ contract Inventory is Owned {
                         newProductsArray = groupIDWithInventoryProductsArray[rMGid][_inventoryID];
 
                         tempBytesArray.push(newProductsArray.rawMaterialsIDs[j]);
-                        priceCalculated = ProductInfo[newProductsArray.rawMaterialsIDs[j]].price;
+                        priceCalculated += ProductInfo[newProductsArray.rawMaterialsIDs[j]].price;
                         ProductInfo[newProductsArray.rawMaterialsIDs[j]].isConsume = true;
                         delete(newProductsArray.rawMaterialsIDs[j]);
                         groupIDWithInventoryProductsArray[rMGid][_inventoryID] = newProductsArray;
@@ -1088,35 +1140,48 @@ contract Inventory is Owned {
         require(opTeam.isOperator(_operationName,msg.sender)); 
         return(finalProductsArray[_operationName].FinalProductIDs,finalProductsArray[_operationName].units);
     }
-
-    function sendProdutsToWarehouse(
-        bytes32 _warehouseID,
-        bytes32 _productCategory,
-        uint256 _units,
-        bool _sendAllProduct
-    )
-        public
-        returns(
-            bool
-        ) {
-        opTeam.isOperator(_productCategory,msg.sender);
-        require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct);
+    function sendProdutsToWarehouse( bytes32 _warehouseID, bytes32 _productCategory, uint256 _units, bool _sendAllProduct ) public returns( bool ) 
+    {
+        opTeam.isOperator(_productCategory,msg.sender); 
+        require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct); 
         if(_sendAllProduct){
-            _units = finalProductsArray[_productCategory].units;
-        }
-        delete(tempBytesArray);
-        delete(priceCalculated) ;
-        for( uint i = 0; i<_units;i++){
-            tempBytesArray.push(finalProductsArray[_productCategory].FinalProductIDs[i]);
-            priceCalculated += manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].price;
-            manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].isConsume = true;
-            finalProductsArray[_productCategory].units -= 1;
-            delete(finalProductsArray[_productCategory].FinalProductIDs[i]);
-        }
-        priceCalculated = (priceCalculated)/_units;
-        WH.registerProduct(_productCategory,tempBytesArray,priceCalculated,_warehouseID);
+            _units = finalProductsArray[_productCategory].units; 
+        } 
+        delete(tempBytesArray); 
+        delete(priceCalculated) ; 
+        for( uint i = 0; i<_units;i++){ 
+            tempBytesArray.push(finalProductsArray[_productCategory].FinalProductIDs[i]); priceCalculated += manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].price; 
+            manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].isConsume = true; 
+            finalProductsArray[_productCategory].units -= 1; 
+            delete(finalProductsArray[_productCategory].FinalProductIDs[i]); 
             
+        } 
+        priceCalculated = (priceCalculated)/_units; 
+        WH.registerProduct(msg.sender,_productCategory,tempBytesArray,priceCalculated,_warehouseID);
+        return true;
     }
+    // function sendProductsToWarehouse(
+    //     bytes32 _warehouseID,
+    //     bytes32 _productCategory,
+    //     uint256 _units,
+    //     bool _sendAllProduct
+    // )
+    //     public
+    //     returns(
+    //         bool
+    //     ) {
+    //     require(opTeam.isOperator(_productCategory,msg.sender));
+    //     require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct);
+    //     if(_sendAllProduct){
+    //         _units = finalProductsArray[_productCategory].units;
+    //     }
+    //     for( uint i = 0; i<_units;i++){
+    //         WH.registerProduct(_productCategory,finalProductsArray[_productCategory].FinalProductIDs[i],manufacturedProducts[finalProductsArray[_productCategory].FinalProductIDs[i]].price,_warehouseID);
+    //         delete(finalProductsArray[_productCategory].FinalProductIDs[i]);
+    //         finalProductsArray[_productCategory].units -= 1;
+    //     }
+    //     return true;
+    // }
 
     function serachFinalProductByID(
         bytes32 _finalProductID
@@ -1161,6 +1226,8 @@ contract Warehouse is Owned {
     Manager Mgr;
     
     bytes32[] tempBytesArray;
+    bytes32[] warehouseList;
+    uint256[] tempUintArray;
     
     struct WarehouseInfo 
     {
@@ -1179,13 +1246,6 @@ contract Warehouse is Owned {
         address retailer;
     } 
     
-    // struct warehouseProductRequirement 
-    // {
-    //     bytes32 requesterID;
-    //     bytes32 productName;
-    //     uint256 units;
-    // }
-
     struct InventoryProductRequirement 
     {
         address requesterID;
@@ -1199,18 +1259,19 @@ contract Warehouse is Owned {
         uint256  units;
         bytes32[]  productIDs;
     }
+
     
     mapping(bytes32 => WarehouseInfo) WareHouse;
-    mapping(bytes32 => ProductInfo) product;
+    mapping(bytes32 => ProductInfo) product;    //<productID:ProductInfo>
     // mapping(bytes32 => warehouseProductRequirement) RequirementMap;
-    mapping(bytes32 => InventoryProductRequirement) RequirementMapInv;
-
-    mapping(bytes32 => mapping(bytes32 => ProductsArray)) ProductsINFO;
+    mapping(bytes32 => InventoryProductRequirement) RequirementMapInv;  //<productCategory:productReq>
+    mapping(bytes32 => mapping(bytes32 => ProductsArray)) ProductsINFO; //<productCategory:<warehouseid:productArray>>
 
     event newProductRequirementOperationTeam(address _requesterID,bytes32 _productName,uint256 _units,bytes32 _pendingRequestID);
     event ProductRegistered(bytes32 _productName,uint256 _productPrice,bytes32 _productWarehouseID);
     event WarehouseRegister(address _warehouseHead,bytes32 warehouseID, bytes32 _warehouseName,bytes32 _warehouseCity);
     event SellOrderDetails(address _retailer,bytes32 _productName,uint _units, bytes32 _fromWarehouseID);
+    event WarehouseAlreadyRegistered(bytes32 _warehouseID,bytes32 _WarehouseName,bytes32 _warehouseCity);
     
     
     
@@ -1225,41 +1286,65 @@ contract Warehouse is Owned {
     {
         require(Auth.isRegistrar(msg.sender));
         _warehouseID = keccak256(_warehouseHead,_warehouseName,_warehouseCity);  
-        WarehouseInfo memory newWarehouseInfo;
-        newWarehouseInfo.warehouseHead = _warehouseHead;
-        newWarehouseInfo.warehouseName = _warehouseName;
-        newWarehouseInfo.warehouseCity = _warehouseCity;
-        WareHouse[_warehouseID] = newWarehouseInfo;
-        // emit InventoryRegistered(_inventoryID,_inventoryName,_inventoryCity);
+        if(WareHouse[_warehouseID].warehouseName == "" )
+        {
+            WarehouseInfo memory newWarehouseInfo;
+            newWarehouseInfo.warehouseHead = _warehouseHead;
+            newWarehouseInfo.warehouseName = _warehouseName;
+            newWarehouseInfo.warehouseCity = _warehouseCity;
+            WareHouse[_warehouseID] = newWarehouseInfo;
+            warehouseList.push(_warehouseID);
+            emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);        
+        } 
+        else 
+        {
+            if (WareHouse[_warehouseID].warehouseName == _warehouseName) 
+            {
+                emit WarehouseAlreadyRegistered(_warehouseID,WareHouse[_warehouseID].warehouseName,WareHouse[_warehouseID].warehouseCity);
+            }
+            else 
+            {
+                    _warehouseID = keccak256(_warehouseHead,_warehouseName,_warehouseCity,block.timestamp);
+                    WarehouseInfo memory newWareHouseSubBranch;
+                    newWareHouseSubBranch.warehouseHead = _warehouseHead;
+                    newWareHouseSubBranch.warehouseName = _warehouseName;
+                    newWareHouseSubBranch.warehouseCity = _warehouseCity;
+                    WareHouse[_warehouseID] = newWareHouseSubBranch;
+                    warehouseList.push(_warehouseID);
+                   emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);
+            }
+        }
         return _warehouseID;
-        emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);
     }
     
-    function registerProduct(bytes32 _productName,bytes32[] _productID,uint256 _productPrice,bytes32 _productWarehouseID) public returns (bool)
+    function registerProduct(address _operationLead,bytes32 _productName,bytes32[] _productID,uint256 _productPrice,bytes32 _productWarehouseID) public returns (bool)
     {
-        require(op.isOperator(_productName,msg.sender));
-        
-       
-        ProductInfo memory newProductInfo;
-        newProductInfo.productName = _productName;
-        newProductInfo.productID = _productID[0];
-        newProductInfo.price = _productPrice;
-        newProductInfo.warehouseID = _productWarehouseID;
-        product[_productName] = newProductInfo;
+        require(op.isOperator(_productName,_operationLead));
+        for(uint i=0;i<_productID.length;i++)
+        {
+            ProductInfo memory newProductInfo;
+            newProductInfo.productName = _productName;
+            newProductInfo.productID = _productID[i];
+            newProductInfo.price = _productPrice;
+            newProductInfo.warehouseID = _productWarehouseID;
+            product[_productID[i]] = newProductInfo;
+        }
 
         if(ProductsINFO[_productName][_productWarehouseID].units > 0 )
         {
-            ProductsINFO[_productName][_productWarehouseID].units += 1;
+            ProductsINFO[_productName][_productWarehouseID].units += _productID.length;
             tempBytesArray = ProductsINFO[_productName][_productWarehouseID].productIDs;
-            tempBytesArray.push(_productName);
-            ProductsINFO[_productName][_productWarehouseID].productIDs = tempBytesArray;
+            for(uint j=0;j<_productID.length;j++)
+            {
+                tempBytesArray.push(_productName);
+            }
+            ProductsINFO[_productName][_productWarehouseID].productIDs = tempBytesArray;            
         }
         else
         {
             ProductsArray memory newProductsArray;
-            newProductsArray.units += 1;
-            tempBytesArray.push(_productName);
-            newProductsArray.productIDs = tempBytesArray;
+            newProductsArray.units += _productID.length;
+            newProductsArray.productIDs = _productID;
             ProductsINFO[_productName][_productWarehouseID] = newProductsArray;
         }
         delete tempBytesArray;
@@ -1269,22 +1354,35 @@ contract Warehouse is Owned {
         return true;
     }
     
-    function searchWarehouseDetails(bytes32 _warehouseAddress) returns (bytes32,address,bytes32,bytes32)
+    function searchWarehouseDetails(bytes32 _warehouseAddress) constant public returns (bytes32,address,bytes32,bytes32)
     {
         require(Mgr.isManager(msg.sender));
         return(_warehouseAddress, WareHouse[_warehouseAddress].warehouseHead, WareHouse[_warehouseAddress].warehouseName, WareHouse[_warehouseAddress].warehouseCity);
     }
 
 
-    function searchProductDetailsbyName(bytes32 _searchProduct) public constant returns (bytes32 productName, uint price, bytes32 warehouseID, bool isConsume , address retailer)
-    {
-        require(Mgr.isManager(msg.sender)); //--------------------------
-        return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);  
-    }
+    // function searchProductDetailsbyName(bytes32 _searchProduct) public constant returns (bytes32 productName, uint price, bytes32 warehouseID, bool isConsume , address retailer)
+    // {
+    //     require(Mgr.isManager(msg.sender)); 
+    //     return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);  
+    // }
 
-    function viewStock (bytes32 _productName, bytes32 _fromWarehouse) returns (uint)
+    function viewStock (bytes32 _productName) public returns (bytes32[] ListofWarehouseID,uint[] ListofUnits)
     {
-        return ProductsINFO[_productName][_fromWarehouse].units ;
+        for(uint i = 0;i < warehouseList.length; i++)
+        {
+            if (ProductsINFO[_productName][warehouseList[i]].units > 0)
+            {
+                tempBytesArray.push(warehouseList[i]);
+                tempUintArray.push(ProductsINFO[_productName][warehouseList[i]].units);
+            }
+        }
+        ListofWarehouseID = tempBytesArray;
+        ListofUnits = tempUintArray;
+        delete(tempBytesArray);
+        delete(tempUintArray);
+        return(ListofWarehouseID,ListofUnits);
+        // return ProductsINFO[_productName][_fromWarehouse].units ;
     }
 
     function requestProductforRetailer(address _retailer,address _retailerContractAddress, bytes32 _productName, uint256 _units, bytes32 _fromWarehouseID) public returns (bool)
@@ -1301,7 +1399,7 @@ contract Warehouse is Owned {
             {
                 _units = ProductsINFO[_productName][_fromWarehouseID].units - _units;
             }
-            broadcastProductRequirement(_retailer,_productName,ProductsINFO[_productName][_fromWarehouseID].units - _units,pendingRequestID);
+            broadcastProductRequirement(_retailer,_productName,_units,pendingRequestID);
         }
     }
 
@@ -1317,15 +1415,14 @@ contract Warehouse is Owned {
         emit newProductRequirementOperationTeam( _requesterID,_productName, _units,_pendingRequestID);
     }
 
-    function searchWarehouseByProductName(bytes32 _productName) public constant returns(bytes32 _warehouseID)
+    function searchWarehouseByProductID(bytes32 _productID) public constant returns(bytes32 _warehouseID)
     {
         require(Mgr.isManager(msg.sender));
-        return product[_productName].warehouseID;
+        return product[_productID].warehouseID;
     }
 
-    function searchProductDetailsbyID(bytes32 _productID) returns (bytes32,uint,bytes32,bool,address)
+    function searchProductDetailsbyID(bytes32 _productID)constant public returns (bytes32,uint,bytes32,bool,address)
     {
-        
         if(product[_productID].productID == _productID)
         {
             return(product[_productID].productName, product[_productID].price, product[_productID].warehouseID, product[_productID].isConsume, product[_productID].retailer);
@@ -1333,7 +1430,7 @@ contract Warehouse is Owned {
         
     }
 
-    function viewProductPendingRequirment(bytes32 _productName, bytes32 _fromWarehouse) external returns (address requesterID, bytes32 requestedProductName, uint units, uint inStock) 
+    function viewProductPendingRequirment(bytes32 _productName, bytes32 _fromWarehouse)constant public returns (address requesterID, bytes32 requestedProductName, uint units, uint inStock) 
     // uint instock
     {
         // require(Mgr.isManager(msg.sender));
@@ -1345,25 +1442,28 @@ contract Warehouse is Owned {
     
     function SellProductTOretailer(address _retailer,address _retailerContractAddress, bytes32 _productName,uint _units, bytes32 _fromWarehouseID) public returns (bytes32)
     {
-        // require(Auth.isValidator(msg.sender));
-        // require(RequirementMap[_productName].units <= ProductsINFO[_productName][_fromWarehouseID].units);
-        for(uint i=0; i<=_units;i++)
-        {
-            if(!(product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].isConsume))
+        require(Mgr.isManager(msg.sender));
+        if (Mgr.productsRequirementFullFilled(msg.sender,_retailer,_productName,_units)) {
+
+            for(uint i=0; i<=_units;i++)
             {
-                product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].isConsume = true;
-                product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].retailer = _retailer;
-                // ProductsINFO[_productName][_fromWarehouseID].productIDS[i].isConsume == true;
-                // ProductsINFO[_productName][_fromWarehouseID].productIDS[i].retailer == _retailer;
-                ProductsINFO[_productName][_fromWarehouseID].units -= 1;
-                Retailer ret = Retailer(_retailerContractAddress);
-                ret.recieveProduct(ProductsINFO[_productName][_fromWarehouseID].productIDs[i],_retailer,_productName,product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].price);
-                delete(ProductsINFO[_productName][_fromWarehouseID].productIDs[i]);
+                if(!(product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].isConsume))
+                {
+                    product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].isConsume = true;
+                    product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].retailer = _retailer;
+                    // ProductsINFO[_productName][_fromWarehouseID].productIDS[i].isConsume == true;
+                    // ProductsINFO[_productName][_fromWarehouseID].productIDS[i].retailer == _retailer;
+                    ProductsINFO[_productName][_fromWarehouseID].units -= 1;
+                    Retailer ret = Retailer(_retailerContractAddress);
+                    ret.recieveProduct(ProductsINFO[_productName][_fromWarehouseID].productIDs[i],_retailer,_productName,product[ProductsINFO[_productName][_fromWarehouseID].productIDs[i]].price);
+                    delete(ProductsINFO[_productName][_fromWarehouseID].productIDs[i]);
+                }
             }
+            bytes32 SellOrderID = keccak256(_retailer,_productName,_units,_fromWarehouseID);
+            emit SellOrderDetails( _retailer,_productName,_units,_fromWarehouseID);              
+            return SellOrderID;
         }
-        bytes32 SellOrderID = keccak256(_retailer,_productName,_units,_fromWarehouseID);
-        emit SellOrderDetails( _retailer,_productName,_units,_fromWarehouseID);              
-        return SellOrderID;
+        
     }
 
 }
@@ -1458,7 +1558,6 @@ contract Retailer is Owned {
         public
         {
         Product memory newProduct;
-        
         newProduct.productID = _productID;
         newProduct.category = _category;
         newProduct.price = _price;
@@ -1473,7 +1572,7 @@ contract Retailer is Owned {
         constant
         returns(
             bytes32[] ProductID,
-            uint256 units
+            uint256 ProductCategory
         ) {
         return (
             ProductArrayOnRetailer[_productCategory][msg.sender],

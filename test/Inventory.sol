@@ -83,6 +83,7 @@ contract Inventory is Owned {
     
     event InventoryRegistered(bytes32 inventoryID,bytes32 name,bytes32 city);
     event InventoryAlreadyRegistered(bytes32 inventoryID,bytes32 name, bytes32 city);
+    event newFinalProductCreated(bytes32 FinalProdcutID,bytes32 Category);
 
     modifier isInventor(bytes32 _inventoryID) {
         if (InventoryStore[_inventoryID].inventoryHead != msg.sender) {
@@ -376,11 +377,12 @@ contract Inventory is Owned {
             if (getRawForFinalProduct(_inventoryID,_rawMaterialGroupID,_rawMaterialUnits,_productID)) {
                 finalProductsArray[_operationName].units += 1;
                 finalProductsArray[_operationName].FinalProductIDs.push(_productID);
-                return true;
+                newFinalProductCreated(_productID,_operationName);
             } else {
                 return false;
             }
         }
+        return true;
     }
 
     function getRawForFinalProduct(
@@ -429,7 +431,7 @@ contract Inventory is Owned {
     function sendProdutsToWarehouse( bytes32 _warehouseID, bytes32 _productCategory, uint256 _units, bool _sendAllProduct ) public returns( bool ) 
     {
         opTeam.isOperator(_productCategory,msg.sender); 
-        require(finalProductsArray[_productCategory].units >= _units || _sendAllProduct); 
+        require(_sendAllProduct || finalProductsArray[_productCategory].units >= _units); 
         if(_sendAllProduct){
             _units = finalProductsArray[_productCategory].units; 
         } 
