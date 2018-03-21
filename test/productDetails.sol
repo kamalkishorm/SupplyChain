@@ -57,7 +57,7 @@ contract ProductDetails is Authorization {
         return true;
     }
 
-    function registerRowMatrial(
+    function registerRowMaterial(
         bytes32 _name,
         address _supplier,
         bytes32 _additionalDiscription

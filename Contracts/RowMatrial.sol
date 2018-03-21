@@ -2,7 +2,7 @@ pragma solidity ^0.4.18;
 import './Authorizer.sol';
 import './Inventory.sol';
 
-contract RowMatrial is Owned {
+contract RowMaterial is Owned {
     
     Authorizer Auth;
     Inventory Invt;
@@ -13,8 +13,8 @@ contract RowMatrial is Owned {
         bytes32 city;
     }
 
-    struct RowMatrialInfo {
-        bytes32 rowMatrialID;
+    struct RowMaterialInfo {
+        bytes32 rowMaterialID;
         bytes32 parent;
         bytes32 name;
         bytes32 groupID;
@@ -26,7 +26,7 @@ contract RowMatrial is Owned {
         // bytes32 inventoryStoreID;        
     }
 
-    struct RowMatrialInfoOwnersDetails {
+    struct RowMaterialInfoOwnersDetails {
         bytes32 name;
         bytes32 companyName;
     }
@@ -39,12 +39,12 @@ contract RowMatrial is Owned {
 
     struct RawMatarialsArray {
         uint256 units;
-        bytes32[] RowMatrialsIDs;
+        bytes32[] RowMaterialsIDs;
     }
 
     mapping(address => Supplier) SupplierDetails;
-    mapping(bytes32 => RowMatrialInfo) RowMatrialMapping;
-    mapping(address => RowMatrialInfoOwnersDetails) owners;
+    mapping(bytes32 => RowMaterialInfo) RowMaterialMapping;
+    mapping(address => RowMaterialInfoOwnersDetails) owners;
     mapping(bytes32 => ProductGroupIDRequirement[]) groupIdRequirement;
     mapping(bytes32 => mapping(address =>RawMatarialsArray)) groupIDWithSupplierRowMatarialsArray;
 
@@ -55,7 +55,7 @@ contract RowMatrial is Owned {
         _;
     }
 
-    function RowMatrial(
+    function RowMaterial(
         address authorizerContractAddress, 
         address inventoryContractAddress
     ) 
@@ -96,7 +96,7 @@ contract RowMatrial is Owned {
         return(SupplierDetails[_supplier].supplier,SupplierDetails[_supplier].name,SupplierDetails[_supplier].city);
     }
 
-    function registerRowMatrial(
+    function registerRowMaterial(
         bytes32 _name,
         bytes32 _groupID,
         address _supplier,
@@ -108,44 +108,44 @@ contract RowMatrial is Owned {
         returns(bytes32) 
         {
         require(Auth.isRegistrar(msg.sender));
-        bytes32 _rowMatrialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,_price,block.timestamp);
+        bytes32 _rowMaterialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,_price,block.timestamp);
 
-        RowMatrialInfo memory newRowMatrialInfo;
-        newRowMatrialInfo.name = _name;
-        newRowMatrialInfo.groupID = _groupID;
-        newRowMatrialInfo.supplier = _supplier;
-        newRowMatrialInfo.additionalDiscription = _additionalDiscription;
-        newRowMatrialInfo.price = _price;
-        newRowMatrialInfo.rowMatrialID = _rowMatrialID;
-        RowMatrialMapping[_rowMatrialID] = newRowMatrialInfo;
+        RowMaterialInfo memory newRowMaterialInfo;
+        newRowMaterialInfo.name = _name;
+        newRowMaterialInfo.groupID = _groupID;
+        newRowMaterialInfo.supplier = _supplier;
+        newRowMaterialInfo.additionalDiscription = _additionalDiscription;
+        newRowMaterialInfo.price = _price;
+        newRowMaterialInfo.rowMaterialID = _rowMaterialID;
+        RowMaterialMapping[_rowMaterialID] = newRowMaterialInfo;
 
-        if (groupIDWithSupplierRowMatarialsArray[_groupID][_supplier].RowMatrialsIDs.length > 0) {
+        if (groupIDWithSupplierRowMatarialsArray[_groupID][_supplier].RowMaterialsIDs.length > 0) {
             groupIDWithSupplierRowMatarialsArray[_groupID][_supplier].units += 1;
-            groupIDWithSupplierRowMatarialsArray[_groupID][_supplier].RowMatrialsIDs.push(_rowMatrialID);
+            groupIDWithSupplierRowMatarialsArray[_groupID][_supplier].RowMaterialsIDs.push(_rowMaterialID);
             // groupIDWithSupplierRowMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         } else {
             RawMatarialsArray memory newRawMatarialsArray;
             newRawMatarialsArray.units += 1;
-            newRawMatarialsArray.RowMatrialsIDs.push(_rowMatrialID);
+            newRawMatarialsArray.RowMaterialsIDs.push(_rowMaterialID);
             groupIDWithSupplierRowMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         }
     }
-    function transferRowMatrialInfoOwnerShip(
+    function transferRowMaterialInfoOwnerShip(
         address _newOwner,
-        bytes32[] rowMatrialIDs
+        bytes32[] rowMaterialIDs
     )
         isSupplier(msg.sender)
         public
         {
-        for (uint i = 0; i < rowMatrialIDs.length;i++) {
-            if (RowMatrialMapping[rowMatrialIDs[i]].currentOwner == msg.sender) {
-                RowMatrialMapping[rowMatrialIDs[i]].currentOwner = _newOwner;
+        for (uint i = 0; i < rowMaterialIDs.length;i++) {
+            if (RowMaterialMapping[rowMaterialIDs[i]].currentOwner == msg.sender) {
+                RowMaterialMapping[rowMaterialIDs[i]].currentOwner = _newOwner;
             }
         }
     }
 
-    function viewRowMatrialInfoByID( 
-        bytes32 _rowMatrialID
+    function viewRowMaterialInfoByID( 
+        bytes32 _rowMaterialID
     )
         public
         constant
@@ -160,29 +160,29 @@ contract RowMatrial is Owned {
             uint256 price
         ) {
         return (
-            // RowMatrialMapping[_rowMatrialID].parent,
-            RowMatrialMapping[_rowMatrialID].name,
-            RowMatrialMapping[_rowMatrialID].groupID,
-            RowMatrialMapping[_rowMatrialID].currentOwner,
-            RowMatrialMapping[_rowMatrialID].supplier,
-            RowMatrialMapping[_rowMatrialID].childs,
-            RowMatrialMapping[_rowMatrialID].additionalDiscription,
-            RowMatrialMapping[_rowMatrialID].price
+            // RowMaterialMapping[_rowMaterialID].parent,
+            RowMaterialMapping[_rowMaterialID].name,
+            RowMaterialMapping[_rowMaterialID].groupID,
+            RowMaterialMapping[_rowMaterialID].currentOwner,
+            RowMaterialMapping[_rowMaterialID].supplier,
+            RowMaterialMapping[_rowMaterialID].childs,
+            RowMaterialMapping[_rowMaterialID].additionalDiscription,
+            RowMaterialMapping[_rowMaterialID].price
         );
     }
 
-    // function viewRowMatrialInfoByGroupID(
+    // function viewRowMaterialInfoByGroupID(
     //     bytes32 _groupID
     // )
     //     public 
     //     constant
     //     returns(
-    //         bytes32[] RowMatrialInfos
+    //         bytes32[] RowMaterialInfos
     //     ) {
     //     for (uint i = 0;i<)
     // }
 
-    function broadcastRowMatrialRequirement(
+    function broadcastRowMaterialRequirement(
         bytes32 _inventoryID,
         bytes32 _groupID,
         uint256 _units,
@@ -223,18 +223,18 @@ contract RowMatrial is Owned {
         require(groupIdRequirement[_groupID].units <= groupIDWithSupplierRowMatarialsArray[_groupID][msg.sender].units);
         
         for (uint i = 0; i < groupIdRequirement[_groupID].units ; i++) {
-        bytes32 memory id = groupIDWithSupplierRowMatarialsArray[_groupID][msg.sender].RowMatrialsIDs[i];
+        bytes32 memory id = groupIDWithSupplierRowMatarialsArray[_groupID][msg.sender].RowMaterialsIDs[i];
         Invt.recieveRawMatarials(
-            RowMatrialMapping[id].rowMatrialID,
-            RowMatrialMapping[id].parent,
-            RowMatrialMapping[id].name,
-            RowMatrialMapping[id].groupID,
-            RowMatrialMapping[id].currentOwner,
-            RowMatrialMapping[id].supplier,
-            RowMatrialMapping[id].childs,
-            RowMatrialMapping[id].additionalDiscription
+            RowMaterialMapping[id].rowMaterialID,
+            RowMaterialMapping[id].parent,
+            RowMaterialMapping[id].name,
+            RowMaterialMapping[id].groupID,
+            RowMaterialMapping[id].currentOwner,
+            RowMaterialMapping[id].supplier,
+            RowMaterialMapping[id].childs,
+            RowMaterialMapping[id].additionalDiscription
         );
-        delete(RowMatrialMapping[id]);
+        delete(RowMaterialMapping[id]);
         }
         groupIDWithSupplierRowMatarialsArray[_groupID][msg.sender].units -= groupIdRequirement[_groupID].units;
 

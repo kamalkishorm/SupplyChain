@@ -18,17 +18,17 @@
 ## Raw_material .sol
 
 ### mapping
-1. mapping(groupID=>broadcast) requestedMatrials
+1. mapping(groupID=>broadcast) requestedMaterials
 ### Struct
 1. broadcast: requirements{inventorID,units}
 ### Functions
 1. `registerSupplier(_name,_city,_supplier)` : new supplier can be registered returns bool.
-2. `registerRowMatrial(name,_groupID,_supplier,_additionalDiscription,_price) `: new raw materials can be registered. it returns a byte32 ID.
-3. `viewRowMatrialInfoByID(_rowMatrialID)` : status of the products can be checked wheather they are available or not. it returns
-     [_rowMatrialID].name,[_rowMatrialID].groupID,[_rowMatrialID].currentOwner,[_rowMatrialID].supplier,         [_rowMatrialID].additionalDiscription 
-4. `transferRowMatrialInfoOwnerShip(_newOwner,rowMatrialIDs)` : the product can be transferred on a request.
+2. `registerRowMaterial(name,_groupID,_supplier,_additionalDiscription,_price) `: new raw materials can be registered. it returns a byte32 ID.
+3. `viewRowMaterialInfoByID(_rowMaterialID)` : status of the products can be checked wheather they are available or not. it returns
+     [_rowMaterialID].name,[_rowMaterialID].groupID,[_rowMaterialID].currentOwner,[_rowMaterialID].supplier,         [_rowMaterialID].additionalDiscription 
+4. `transferRowMaterialInfoOwnerShip(_newOwner,rowMaterialIDs)` : the product can be transferred on a request.
 5. `viewSupplier(address _supplier)`: it will return the suppliers details from where the product arrived.returns supplier,name,city.
-6. `broadcastRowMatrialRequirement(_inventoryID,_groupID,_units,_pricePerUnit)`: it will broadcast the raw material requirements to all vendors.
+6. `broadcastRowMaterialRequirement(_inventoryID,_groupID,_units,_pricePerUnit)`: it will broadcast the raw material requirements to all vendors.
 
 7. `viewGroupIDRequirement<_groupID>`(reuests can be viewed for a particular product id) 
 8. `sendSellOrder(_groupID,_inventorID)`: final bill with product will be sent to the inventory. 
@@ -41,9 +41,9 @@
 ### Functions
 
 1. recieveRawMatarials(_name,_groupID, _currentOwner,_supplier,_additionalDiscription,_price,_inventorID) : for receiving the rawmaterials
-2. requestRowMatrials(_inventorID,_groupID,_units) :new requirements for raw materials can be sent.
+2. requestRowMaterials(_inventorID,_groupID,_units) :new requirements for raw materials can be sent.
 3. registerInventory(_inventoryHead,_inventoryName,_inventoryCity) returns _inventoryID : new inventory can be registered
-4. setRawMaterialContractAddress(rowMatrialContractAddress) returns bool
+4. setRawMaterialContractAddress(rowMaterialContractAddress) returns bool
 5. Inventory(authorizerContractAddress)
 6. SearchProductByGroupID()
 7. viewInventory()
@@ -51,7 +51,7 @@
 9. 
 
 ### Events:
-1. event RawMatarialsReceived(_rawMatrialID,_parent,_name,_groupID,_currentOwner,_supplier, _additionalDiscription,_price,_inventorID)
+1. event RawMatarialsReceived(_rawMaterialID,_parent,_name,_groupID,_currentOwner,_supplier, _additionalDiscription,_price,_inventorID)
 2. event RawMaterialAlreadyRequested(_inventorID,_groupID,_units,_pricePerUnit)
 3. event InventoryRegistered(_inventoryHead, _inventoryName, _inventoryCity)
  

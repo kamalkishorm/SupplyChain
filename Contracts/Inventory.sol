@@ -1,11 +1,11 @@
 pragma solidity ^0.4.18;
-import './RowMatrial.sol';
+import './RowMaterial.sol';
 import './Authorizer.sol';
 
 contract Inventory is Owned {
     
     Authorizer Auth;
-    RowMatrial RowMat;
+    RowMaterial RowMat;
 
     struct InventoryStoreInfo {
         address inventoryHead;
@@ -25,8 +25,8 @@ contract Inventory is Owned {
         uint256 price;
         bytes32 inventoryStoreID;
     }
-    // struct RowMatrialInfo {
-    //     bytes32 rowMatrialID;
+    // struct RowMaterialInfo {
+    //     bytes32 rowMaterialID;
     //     bytes32 parent;
     //     bytes32 name;
     //     bytes32 groupID;
@@ -52,12 +52,12 @@ contract Inventory is Owned {
     
     function Inventory(
         address authorizerContractAddress, 
-        address rowMatrialContractAddress
+        address rowMaterialContractAddress
     ) 
         public 
         {
         Auth = Authorizer(authorizerContractAddress);
-        RowMat = RowMatrial(rowMatrialContractAddress);
+        RowMat = RowMaterial(rowMaterialContractAddress);
     }
 
     function registerInventory(
@@ -82,7 +82,7 @@ contract Inventory is Owned {
         return _inventoryID;
     }
 
-    function requestRowMatrials(
+    function requestRowMaterials(
         bytes32 _inventorID,
         bytes32 _groupID,
         uint256 _units
@@ -94,7 +94,7 @@ contract Inventory is Owned {
     }
 
     function recieveRawMatarials(
-        bytes32 _rowMatrialID,
+        bytes32 _rowMaterialID,
         bytes32 _parent,
         bytes32 _name,
         bytes32 _groupID,
@@ -109,7 +109,7 @@ contract Inventory is Owned {
         {
 
         Product memory newProduct;
-        newProduct.productID = _rowMatrialID;
+        newProduct.productID = _rowMaterialID;
         newProduct.parent = _parent;
         newProduct.name = _name;
         newProduct.groupID = _groupID;
@@ -121,6 +121,6 @@ contract Inventory is Owned {
         newProduct.inventoryStoreID = _inventorID;
 
         ProductsInInventory[_inventorID].push(newProduct);
-        ProductInfo[_rowMatrialID] = newProduct;
+        ProductInfo[_rowMaterialID] = newProduct;
     }
 }

@@ -12,6 +12,8 @@ contract Warehouse is Owned
     Manager Mgr;
     
     bytes32[] tempBytesArray;
+    bytes32[] warehouseList;
+    uint256[] tempUintArray;
     
     struct WarehouseInfo 
     {
@@ -30,13 +32,6 @@ contract Warehouse is Owned
         address retailer;
     } 
     
-    // struct warehouseProductRequirement 
-    // {
-    //     bytes32 requesterID;
-    //     bytes32 productName;
-    //     uint256 units;
-    // }
-
     struct InventoryProductRequirement 
     {
         address requesterID;
@@ -50,18 +45,19 @@ contract Warehouse is Owned
         uint256  units;
         bytes32[]  productIDs;
     }
+
     
     mapping(bytes32 => WarehouseInfo) WareHouse;
     mapping(bytes32 => ProductInfo) product;    //<productID:ProductInfo>
     // mapping(bytes32 => warehouseProductRequirement) RequirementMap;
     mapping(bytes32 => InventoryProductRequirement) RequirementMapInv;  //<productCategory:productReq>
-
     mapping(bytes32 => mapping(bytes32 => ProductsArray)) ProductsINFO; //<productCategory:<warehouseid:productArray>>
 
     event newProductRequirementOperationTeam(address _requesterID,bytes32 _productName,uint256 _units,bytes32 _pendingRequestID);
     event ProductRegistered(bytes32 _productName,uint256 _productPrice,bytes32 _productWarehouseID);
     event WarehouseRegister(address _warehouseHead,bytes32 warehouseID, bytes32 _warehouseName,bytes32 _warehouseCity);
     event SellOrderDetails(address _retailer,bytes32 _productName,uint _units, bytes32 _fromWarehouseID);
+    event WarehouseAlreadyRegistered(bytes32 _warehouseID,bytes32 _WarehouseName,bytes32 _warehouseCity);
     
     
     
@@ -76,39 +72,65 @@ contract Warehouse is Owned
     {
         require(Auth.isRegistrar(msg.sender));
         _warehouseID = keccak256(_warehouseHead,_warehouseName,_warehouseCity);  
-        WarehouseInfo memory newWarehouseInfo;
-        newWarehouseInfo.warehouseHead = _warehouseHead;
-        newWarehouseInfo.warehouseName = _warehouseName;
-        newWarehouseInfo.warehouseCity = _warehouseCity;
-        WareHouse[_warehouseID] = newWarehouseInfo;
-        // emit InventoryRegistered(_inventoryID,_inventoryName,_inventoryCity);
+        if(WareHouse[_warehouseID].warehouseName == "" )
+        {
+            WarehouseInfo memory newWarehouseInfo;
+            newWarehouseInfo.warehouseHead = _warehouseHead;
+            newWarehouseInfo.warehouseName = _warehouseName;
+            newWarehouseInfo.warehouseCity = _warehouseCity;
+            WareHouse[_warehouseID] = newWarehouseInfo;
+            warehouseList.push(_warehouseID);
+            emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);        
+        } 
+        else 
+        {
+            if (WareHouse[_warehouseID].warehouseName == _warehouseName) 
+            {
+                emit WarehouseAlreadyRegistered(_warehouseID,WareHouse[_warehouseID].warehouseName,WareHouse[_warehouseID].warehouseCity);
+            }
+            else 
+            {
+                    _warehouseID = keccak256(_warehouseHead,_warehouseName,_warehouseCity,block.timestamp);
+                    WarehouseInfo memory newWareHouseSubBranch;
+                    newWareHouseSubBranch.warehouseHead = _warehouseHead;
+                    newWareHouseSubBranch.warehouseName = _warehouseName;
+                    newWareHouseSubBranch.warehouseCity = _warehouseCity;
+                    WareHouse[_warehouseID] = newWareHouseSubBranch;
+                    warehouseList.push(_warehouseID);
+                   emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);
+            }
+        }
         return _warehouseID;
-        emit WarehouseRegister(_warehouseHead,_warehouseID,_warehouseName, _warehouseCity);
     }
     
     function registerProduct(address _operationLead,bytes32 _productName,bytes32[] _productID,uint256 _productPrice,bytes32 _productWarehouseID) public returns (bool)
     {
         require(op.isOperator(_productName,_operationLead));
-        ProductInfo memory newProductInfo;
-        newProductInfo.productName = _productName;
-        newProductInfo.productID = _productID[0];
-        newProductInfo.price = _productPrice;
-        newProductInfo.warehouseID = _productWarehouseID;
-        product[_productName] = newProductInfo;
+        for(uint i=0;i<_productID.length;i++)
+        {
+            ProductInfo memory newProductInfo;
+            newProductInfo.productName = _productName;
+            newProductInfo.productID = _productID[i];
+            newProductInfo.price = _productPrice;
+            newProductInfo.warehouseID = _productWarehouseID;
+            product[_productID[i]] = newProductInfo;
+        }
 
         if(ProductsINFO[_productName][_productWarehouseID].units > 0 )
         {
-            ProductsINFO[_productName][_productWarehouseID].units += 1;
+            ProductsINFO[_productName][_productWarehouseID].units += _productID.length;
             tempBytesArray = ProductsINFO[_productName][_productWarehouseID].productIDs;
-            tempBytesArray.push(_productName);
-            ProductsINFO[_productName][_productWarehouseID].productIDs = tempBytesArray;
+            for(uint j=0;j<_productID.length;j++)
+            {
+                tempBytesArray.push(_productName);
+            }
+            ProductsINFO[_productName][_productWarehouseID].productIDs = tempBytesArray;            
         }
         else
         {
             ProductsArray memory newProductsArray;
-            newProductsArray.units += 1;
-            tempBytesArray.push(_productName);
-            newProductsArray.productIDs = tempBytesArray;
+            newProductsArray.units += _productID.length;
+            newProductsArray.productIDs = _productID;
             ProductsINFO[_productName][_productWarehouseID] = newProductsArray;
         }
         delete tempBytesArray;
@@ -125,15 +147,28 @@ contract Warehouse is Owned
     }
 
 
-    function searchProductDetailsbyName(bytes32 _searchProduct) public constant returns (bytes32 productName, uint price, bytes32 warehouseID, bool isConsume , address retailer)
-    {
-        require(Mgr.isManager(msg.sender)); //--------------------------
-        return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);  
-    }
+    // function searchProductDetailsbyName(bytes32 _searchProduct) public constant returns (bytes32 productName, uint price, bytes32 warehouseID, bool isConsume , address retailer)
+    // {
+    //     require(Mgr.isManager(msg.sender)); 
+    //     return (product[_searchProduct].productName, product[_searchProduct].price, product[_searchProduct].warehouseID, product[_searchProduct].isConsume, product[_searchProduct].retailer);  
+    // }
 
-    function viewStock (bytes32 _productName, bytes32 _fromWarehouse)constant public returns (uint)
+    function viewStock (bytes32 _productName) public returns (bytes32[] ListofWarehouseID,uint[] ListofUnits)
     {
-        return ProductsINFO[_productName][_fromWarehouse].units ;
+        for(uint i = 0;i < warehouseList.length; i++)
+        {
+            if (ProductsINFO[_productName][warehouseList[i]].units > 0)
+            {
+                tempBytesArray.push(warehouseList[i]);
+                tempUintArray.push(ProductsINFO[_productName][warehouseList[i]].units);
+            }
+        }
+        ListofWarehouseID = tempBytesArray;
+        ListofUnits = tempUintArray;
+        delete(tempBytesArray);
+        delete(tempUintArray);
+        return(ListofWarehouseID,ListofUnits);
+        // return ProductsINFO[_productName][_fromWarehouse].units ;
     }
 
     function requestProductforRetailer(address _retailer,address _retailerContractAddress, bytes32 _productName, uint256 _units, bytes32 _fromWarehouseID) public returns (bool)
@@ -150,7 +185,7 @@ contract Warehouse is Owned
             {
                 _units = ProductsINFO[_productName][_fromWarehouseID].units - _units;
             }
-            broadcastProductRequirement(_retailer,_productName,ProductsINFO[_productName][_fromWarehouseID].units - _units,pendingRequestID);
+            broadcastProductRequirement(_retailer,_productName,_units,pendingRequestID);
         }
     }
 
@@ -166,15 +201,14 @@ contract Warehouse is Owned
         emit newProductRequirementOperationTeam( _requesterID,_productName, _units,_pendingRequestID);
     }
 
-    function searchWarehouseByProductName(bytes32 _productName) public constant returns(bytes32 _warehouseID)
+    function searchWarehouseByProductID(bytes32 _productID) public constant returns(bytes32 _warehouseID)
     {
         require(Mgr.isManager(msg.sender));
-        return product[_productName].warehouseID;
+        return product[_productID].warehouseID;
     }
 
     function searchProductDetailsbyID(bytes32 _productID)constant public returns (bytes32,uint,bytes32,bool,address)
     {
-        
         if(product[_productID].productID == _productID)
         {
             return(product[_productID].productName, product[_productID].price, product[_productID].warehouseID, product[_productID].isConsume, product[_productID].retailer);

@@ -38,7 +38,7 @@ contract Manager is Owned {
     {
         if (ManagerInfo[_managerAddress].managerAddress == _managerAddress) 
         {
-           return true ;
+            return true;
         }
         else 
         {
@@ -62,9 +62,9 @@ contract Manager is Owned {
         bytes32 _designation, 
         bytes32 _additionalInfo
     )
-        onlyOwner 
         public 
         {
+        require(Auth.isRegistrar(msg.sender));
         ManagerDetails memory newManager;
         newManager.managerAddress = _manager;
         newManager.name = _name;
@@ -104,7 +104,7 @@ contract Manager is Owned {
         
     }
     
-    function productsRequirementFullFilled(address _managerAddress,address _retailerAddress,bytes32 _productName, uint256 _units) public returns(bool){
+    function productsRequirementFullFilled(address _managerAddress,address _retailerAddress,bytes32 _productName, uint256 _units) constant public returns(bool){
         require(isManager(_managerAddress));
         if (CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units > 0) {
             CategoryWiseRetailerRequirementRequestes[_productName][_retailerAddress].units -= _units;

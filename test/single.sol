@@ -239,8 +239,8 @@ contract OperationTeam is Owned {
         address[] teamMembers;
         bytes32 teamName;
         bytes32 operationName;
-        bytes32[] rawMatrialGroupID;
-        uint256[] rawMatrialUnits;
+        bytes32[] rawMaterialGroupID;
+        uint256[] rawMaterialUnits;
         bytes32 productDescription;
     }
     
@@ -294,8 +294,8 @@ contract OperationTeam is Owned {
         address[] _teamMembers,
         bytes32 _teamName,
         bytes32 _operationName,
-        bytes32[] _rawMatrialGroupID,
-        uint256[] _rawMatrialUnits,
+        bytes32[] _rawMaterialGroupID,
+        uint256[] _rawMaterialUnits,
         bytes32 _productDescription
     )
         public
@@ -311,8 +311,8 @@ contract OperationTeam is Owned {
             newOperationTeamInfo.teamMembers = _teamMembers;
             newOperationTeamInfo.teamName = _teamName;
             newOperationTeamInfo.operationName = _operationName;
-            newOperationTeamInfo.rawMatrialGroupID = _rawMatrialGroupID;
-            newOperationTeamInfo.rawMatrialUnits = _rawMatrialUnits;
+            newOperationTeamInfo.rawMaterialGroupID = _rawMaterialGroupID;
+            newOperationTeamInfo.rawMaterialUnits = _rawMaterialUnits;
             newOperationTeamInfo.productDescription = _productDescription;            
             operationDetails[_operationName] = newOperationTeamInfo;
             operationTeams.push(_operationName);
@@ -337,9 +337,9 @@ contract OperationTeam is Owned {
         returns(
             bool
         ) {
-        return (Invt.getRawMatrialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMatrialGroupID,operationDetails[_operationName].rawMatrialUnits,operationDetails[_operationName].productDescription));
+        return (Invt.getRawMaterialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMaterialGroupID,operationDetails[_operationName].rawMaterialUnits,operationDetails[_operationName].productDescription));
     }
-    // function getRawMatrialsFromInventory(
+    // function getRawMaterialsFromInventory(
     //     bytes32 _operationName,
     //     bytes32 _inventoryID,
     //     uint256 _units
@@ -350,9 +350,9 @@ contract OperationTeam is Owned {
     //     ) {
     //     require(operationDetails[_operationName].teamLead == msg.sender);
     //     priceCalculator = 0;
-    //     for (uint i = 0; i < operationDetails[_operationName].rawMatrialGroupID.length;i++) {
-    //         tempBytesArray = Invt.getRawMatrialFromInventory(_inventoryID,operationDetails[_operationName].rawMatrialGroupID[i],operationDetails[_operationName].rawMatrialUnits[i])[0];
-    //         priceCalculator += Invt.getRawMatrialFromInventory(_inventoryID,operationDetails[_operationName].rawMatrialGroupID[i],operationDetails[_operationName].rawMatrialUnits[i])[1];            
+    //     for (uint i = 0; i < operationDetails[_operationName].rawMaterialGroupID.length;i++) {
+    //         tempBytesArray = Invt.getRawMaterialFromInventory(_inventoryID,operationDetails[_operationName].rawMaterialGroupID[i],operationDetails[_operationName].rawMaterialUnits[i])[0];
+    //         priceCalculator += Invt.getRawMaterialFromInventory(_inventoryID,operationDetails[_operationName].rawMaterialGroupID[i],operationDetails[_operationName].rawMaterialUnits[i])[1];            
     //     }
     //     bytes32 _productID = keccak256(tempBytesArray.length,tempBytesArray);
     //     FinalProduct memory newFinalProduct;
@@ -382,7 +382,7 @@ contract OperationTeam is Owned {
 
 }
 
-contract RawMatrial is Owned {
+contract RawMaterial is Owned {
     
     Authorizer Auth;
     Inventory Invt;
@@ -395,8 +395,8 @@ contract RawMatrial is Owned {
         bytes32 city;
     }
 
-    struct RawMatrialInfo {
-        bytes32 rawMatrialID;
+    struct RawMaterialInfo {
+        bytes32 rawMaterialID;
         // bytes32 parent;
         bytes32 name;
         bytes32 groupID;
@@ -409,7 +409,7 @@ contract RawMatrial is Owned {
         bool isConsume;     
     }
 
-    struct RawMatrialInfoOwnersDetails {
+    struct RawMaterialInfoOwnersDetails {
         bytes32 name;
         bytes32 companyName;
     }
@@ -422,20 +422,20 @@ contract RawMatrial is Owned {
 
     struct RawMatarialsArray {
         uint256 units;
-        bytes32[] rawMatrialsIDs;
+        bytes32[] rawMaterialsIDs;
     }
 
     mapping(address => Supplier) SupplierDetails;
-    mapping(bytes32 => RawMatrialInfo) RawMatrialMapping;
-    mapping(address => RawMatrialInfoOwnersDetails) owners;
+    mapping(bytes32 => RawMaterialInfo) RawMaterialMapping;
+    mapping(address => RawMaterialInfoOwnersDetails) owners;
     mapping(bytes32 => ProductGroupIDRequirement) groupIdRequirement;
     mapping(bytes32 => mapping(address =>RawMatarialsArray)) groupIDWithSupplierRawMatarialsArray;
 
     event SupplierRegistered(bytes32 name,bytes32 city,address suplierAddress);
     event SupplierAlreadyRegistered(bytes32 name,bytes32 city,address suplierAddress);
-    event RawMatrialRegistered(bytes32 rawMatrialID,bytes32 groupID, address supplier);
+    event RawMaterialRegistered(bytes32 rawMaterialID,bytes32 groupID, address supplier);
     event RawMatarialOwnershipTransfered(address oldSupplier,address newSupplier,bytes32[] rawMatrilIDs);
-    event RawMatrialRequirement(bytes32 groupID,uint256 units,uint256 pricePerUnit,bytes32 inventoryID);
+    event RawMaterialRequirement(bytes32 groupID,uint256 units,uint256 pricePerUnit,bytes32 inventoryID);
     event OrderTransfer(bytes32 groupID,uint256 units,bytes32 inventoryID);
 
     modifier isSupplier(address _supplier) {
@@ -445,7 +445,7 @@ contract RawMatrial is Owned {
         _;
     }
 
-    function RawMatrial(
+    function RawMaterial(
         address authorizerContractAddress
     ) 
         public 
@@ -494,7 +494,7 @@ contract RawMatrial is Owned {
         return(SupplierDetails[_supplier].supplier,SupplierDetails[_supplier].name,SupplierDetails[_supplier].city);
     }
 
-    function registerRawMatrial(
+    function registerRawMaterial(
         bytes32 _name,
         bytes32 _groupID,
         address _supplier,
@@ -505,53 +505,53 @@ contract RawMatrial is Owned {
         returns(bytes32) 
         {
         require(Auth.isRegistrar(msg.sender));
-        bytes32 _rawMatrialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp);
+        bytes32 _rawMaterialID = keccak256(_name,_groupID,_supplier,_additionalDiscription,block.timestamp);
 
-        RawMatrialInfo memory newRawMatrialInfo;
-        newRawMatrialInfo.name = _name;
-        newRawMatrialInfo.groupID = _groupID;
-        newRawMatrialInfo.supplier = _supplier;
-        newRawMatrialInfo.additionalDiscription = _additionalDiscription;
-        // newRawMatrialInfo.price = _price;
-        newRawMatrialInfo.rawMatrialID = _rawMatrialID;
-        RawMatrialMapping[_rawMatrialID] = newRawMatrialInfo;
+        RawMaterialInfo memory newRawMaterialInfo;
+        newRawMaterialInfo.name = _name;
+        newRawMaterialInfo.groupID = _groupID;
+        newRawMaterialInfo.supplier = _supplier;
+        newRawMaterialInfo.additionalDiscription = _additionalDiscription;
+        // newRawMaterialInfo.price = _price;
+        newRawMaterialInfo.rawMaterialID = _rawMaterialID;
+        RawMaterialMapping[_rawMaterialID] = newRawMaterialInfo;
 
-        if (groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMatrialsIDs.length > 0) {
+        if (groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs.length > 0) {
             groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].units += 1;
-            tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMatrialsIDs;
-            tempBytesArray.push(_rawMatrialID);
-            groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMatrialsIDs = tempBytesArray;
+            tempBytesArray = groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs;
+            tempBytesArray.push(_rawMaterialID);
+            groupIDWithSupplierRawMatarialsArray[_groupID][_supplier].rawMaterialsIDs = tempBytesArray;
             // delete(tempBytesArray);
             // groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         } else {
             RawMatarialsArray memory newRawMatarialsArray;
             newRawMatarialsArray.units += 1;
-            tempBytesArray.push(_rawMatrialID);
-            newRawMatarialsArray.rawMatrialsIDs = tempBytesArray;
+            tempBytesArray.push(_rawMaterialID);
+            newRawMatarialsArray.rawMaterialsIDs = tempBytesArray;
             groupIDWithSupplierRawMatarialsArray[_groupID][_supplier] = newRawMatarialsArray;
         }
         delete(tempBytesArray);
-        emit RawMatrialRegistered(_rawMatrialID,_groupID,_supplier);
-        return(_rawMatrialID);
+        emit RawMaterialRegistered(_rawMaterialID,_groupID,_supplier);
+        return(_rawMaterialID);
     }
 
-    function transferRawMatrialInfoOwnerShip(
+    function transferRawMaterialInfoOwnerShip(
         address _newOwner,
-        bytes32[] rawMatrialIDs
+        bytes32[] rawMaterialIDs
     )
         isSupplier(msg.sender)
         public
         {
-        for (uint i = 0; i < rawMatrialIDs.length;i++) {
-            if (RawMatrialMapping[rawMatrialIDs[i]].currentOwner == msg.sender) {
-                RawMatrialMapping[rawMatrialIDs[i]].currentOwner = _newOwner;
+        for (uint i = 0; i < rawMaterialIDs.length;i++) {
+            if (RawMaterialMapping[rawMaterialIDs[i]].currentOwner == msg.sender) {
+                RawMaterialMapping[rawMaterialIDs[i]].currentOwner = _newOwner;
             }
         }
-        emit RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMatrialIDs);
+        emit RawMatarialOwnershipTransfered(msg.sender,_newOwner,rawMaterialIDs);
     }
 
-    function viewRawMatrialInfoByID( 
-        bytes32 _rawMatrialID
+    function viewRawMaterialInfoByID( 
+        bytes32 _rawMaterialID
     )
         public
         constant
@@ -565,13 +565,13 @@ contract RawMatrial is Owned {
             bytes32 additionalDiscription
         ) {
             return (
-            RawMatrialMapping[_rawMatrialID].name,
-            RawMatrialMapping[_rawMatrialID].groupID,
-            RawMatrialMapping[_rawMatrialID].currentOwner,
-            RawMatrialMapping[_rawMatrialID].supplier,
-            // RawMatrialMapping[_rawMatrialID].childs,
-            RawMatrialMapping[_rawMatrialID].additionalDiscription
-            // RawMatrialMapping[_rawMatrialID].price
+            RawMaterialMapping[_rawMaterialID].name,
+            RawMaterialMapping[_rawMaterialID].groupID,
+            RawMaterialMapping[_rawMaterialID].currentOwner,
+            RawMaterialMapping[_rawMaterialID].supplier,
+            // RawMaterialMapping[_rawMaterialID].childs,
+            RawMaterialMapping[_rawMaterialID].additionalDiscription
+            // RawMaterialMapping[_rawMaterialID].price
         );
     }
 
@@ -587,18 +587,18 @@ contract RawMatrial is Owned {
         ) {
         return(_groupID,groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
     }
-    // function viewRawMatrialInfoByGroupID(
+    // function viewRawMaterialInfoByGroupID(
     //     bytes32 _groupID
     // )
     //     public 
     //     constant
     //     returns(
-    //         bytes32[] RawMatrialInfos
+    //         bytes32[] RawMaterialInfos
     //     ) {
     //     for (uint i = 0;i<)
     // }
 
-    function broadcastRawMatrialRequirement(
+    function broadcastRawMaterialRequirement(
         bytes32 _inventoryID,
         bytes32 _groupID,
         uint256 _units,
@@ -613,7 +613,7 @@ contract RawMatrial is Owned {
             newProductGroupIDRequirement.pricePerUnit += _pricePerUnit;
             groupIdRequirement[_groupID] = newProductGroupIDRequirement;
         // }
-        emit RawMatrialRequirement(_groupID,_units,_pricePerUnit,_inventoryID);
+        emit RawMaterialRequirement(_groupID,_units,_pricePerUnit,_inventoryID);
     }
 
     function viewGroupIDRequirement(
@@ -641,22 +641,22 @@ contract RawMatrial is Owned {
         require(groupIdRequirement[_groupID].units <= groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].units);
         
         for (uint i = 0; i < groupIdRequirement[_groupID].units ; i++) {
-        bytes32 id = groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].rawMatrialsIDs[i];
+        bytes32 id = groupIDWithSupplierRawMatarialsArray[_groupID][msg.sender].rawMaterialsIDs[i];
         if (groupIdRequirement[_groupID].inventoryID==_inventoryID) {
             Invt.recieveRawMatarials(
-                RawMatrialMapping[id].rawMatrialID,
-                // RawMatrialMapping[id].parent,
-                RawMatrialMapping[id].name,
-                RawMatrialMapping[id].groupID,
-                // RawMatrialMapping[id].currentOwner,
-                RawMatrialMapping[id].supplier,
-                // RawMatrialMapping[id].childs,
-                RawMatrialMapping[id].additionalDiscription,
+                RawMaterialMapping[id].rawMaterialID,
+                // RawMaterialMapping[id].parent,
+                RawMaterialMapping[id].name,
+                RawMaterialMapping[id].groupID,
+                // RawMaterialMapping[id].currentOwner,
+                RawMaterialMapping[id].supplier,
+                // RawMaterialMapping[id].childs,
+                RawMaterialMapping[id].additionalDiscription,
                 groupIdRequirement[_groupID].pricePerUnit,
                 groupIdRequirement[_groupID].inventoryID
             );
-        // delete(RawMatrialMapping[id]);
-        RawMatrialMapping[id].isConsume = true;
+        // delete(RawMaterialMapping[id]);
+        RawMaterialMapping[id].isConsume = true;
         }
         }
         delete(groupIdRequirement[_groupID]);
@@ -670,7 +670,7 @@ contract RawMatrial is Owned {
 contract Inventory is Owned {
     
     Authorizer Auth;
-    RawMatrial RawMat;
+    RawMaterial RawMat;
     OperationTeam opTeam;
     Warehouse WH;
 
@@ -702,7 +702,7 @@ contract Inventory is Owned {
 
     struct ProductsArray {
         uint256 units;
-        bytes32[] rawMatrialsIDs;
+        bytes32[] rawMaterialsIDs;
     }
 
     struct FinalProduct {
@@ -719,8 +719,8 @@ contract Inventory is Owned {
         bytes32[] FinalProductIDs;
     }
 
-    // struct RawMatrialInfo {
-    //     bytes32 RawMatrialID;
+    // struct RawMaterialInfo {
+    //     bytes32 RawMaterialID;
     //     bytes32 parent;
     //     bytes32 name;
     //     bytes32 groupID;
@@ -777,8 +777,8 @@ contract Inventory is Owned {
         return(InventoryStore[_inventoryID].inventoryHead,InventoryStore[_inventoryID].inventoryName,InventoryStore[_inventoryID].inventoryCity);
     }
 
-    function setRawMaterialContractAddress(address rawMatrialContractAddress) public onlyOwner returns(bool) {
-         RawMat = RawMatrial(rawMatrialContractAddress);
+    function setRawMaterialContractAddress(address rawMaterialContractAddress) public onlyOwner returns(bool) {
+         RawMat = RawMaterial(rawMaterialContractAddress);
     }
 
     function setWarehouseContractAddress(address _warehouseContractAddress) public onlyOwner returns(bool) {
@@ -831,7 +831,7 @@ contract Inventory is Owned {
         return _inventoryID;
     }
 
-    function requestRawMatrials(
+    function requestRawMaterials(
         bytes32 _inventoryID,
         bytes32 _groupID,
         uint256 _units,
@@ -840,11 +840,11 @@ contract Inventory is Owned {
         public 
         isInventor(_inventoryID)
         {
-        RawMat.broadcastRawMatrialRequirement(_inventoryID,_groupID,_units,_pricePerUnit);
+        RawMat.broadcastRawMaterialRequirement(_inventoryID,_groupID,_units,_pricePerUnit);
     }
 
     function recieveRawMatarials(
-        bytes32 _rawMatrialID,
+        bytes32 _rawMaterialID,
         // bytes32 _parent,
         bytes32 _name,
         bytes32 _groupID,
@@ -859,7 +859,7 @@ contract Inventory is Owned {
         {
 
         Product memory newProduct;
-        newProduct.productID = _rawMatrialID;
+        newProduct.productID = _rawMaterialID;
         // newProduct.parent = _parent;
         newProduct.name = _name;
         newProduct.groupID = _groupID;
@@ -871,25 +871,25 @@ contract Inventory is Owned {
         newProduct.inventoryStoreID = _inventoryID;
 
         ProductsInInventory[_inventoryID].push(newProduct);
-        ProductInfo[_rawMatrialID] = newProduct;
+        ProductInfo[_rawMaterialID] = newProduct;
         InventoryStore[_inventoryID].groupIdCounts[_groupID] += 1;
 
-         if (groupIDWithInventoryProductsArray[_groupID][_inventoryID].rawMatrialsIDs.length > 0) {
+         if (groupIDWithInventoryProductsArray[_groupID][_inventoryID].rawMaterialsIDs.length > 0) {
             groupIDWithInventoryProductsArray[_groupID][_inventoryID].units += 1;
-            tempBytesArray = groupIDWithInventoryProductsArray[_groupID][_inventoryID].rawMatrialsIDs;
-            tempBytesArray.push(_rawMatrialID);
-            groupIDWithInventoryProductsArray[_groupID][_inventoryID].rawMatrialsIDs = tempBytesArray;
+            tempBytesArray = groupIDWithInventoryProductsArray[_groupID][_inventoryID].rawMaterialsIDs;
+            tempBytesArray.push(_rawMaterialID);
+            groupIDWithInventoryProductsArray[_groupID][_inventoryID].rawMaterialsIDs = tempBytesArray;
             // delete(tempBytesArray);
             // groupIDWithInventoryProductsArray[_groupID][_inventoryID] = newProductsArray;
         } else {
             ProductsArray memory newProductsArray;
             newProductsArray.units += 1;
-            tempBytesArray.push(_rawMatrialID);
-            newProductsArray.rawMatrialsIDs = tempBytesArray;
+            tempBytesArray.push(_rawMaterialID);
+            newProductsArray.rawMaterialsIDs = tempBytesArray;
             groupIDWithInventoryProductsArray[_groupID][_inventoryID] = newProductsArray;
         }
         delete(tempBytesArray);
-        // emit RawMatrialRegistered(_rawMatrialID,_groupID,_inventoryID);
+        // emit RawMaterialRegistered(_rawMaterialID,_groupID,_inventoryID);
     }
 
     function searchProductByGroupID(
@@ -964,9 +964,9 @@ contract Inventory is Owned {
         );
     }
 
-    // function getRawMatrialFromInventory(
+    // function getRawMaterialFromInventory(
     //     bytes32 _inventoryID,
-    //     bytes32 _rawMatrialGroupID,
+    //     bytes32 _rawMaterialGroupID,
     //     uint256 _units
     // )
     //     external
@@ -974,16 +974,16 @@ contract Inventory is Owned {
     //         bytes32[],
     //         uint256
     //     ) {
-    //     require(groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].units >= _units);
+    //     require(groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].units >= _units);
     //     bytes32[] tempBArray;
     //     uint256 _priceCalculated;
     //     for (uint i = 0; i < _units ; i++) {
-    //         tempBytesArray.push(groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].rawMatrialsIDs[i]);
-    //         _priceCalculated = ProductInfo[groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].rawMatrialsIDs[i]].price;
-    //         ProductInfo[groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].rawMatrialsIDs[i]].isConsume = true;
-    //         delete(groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].rawMatrialsIDs[i]);
+    //         tempBytesArray.push(groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].rawMaterialsIDs[i]);
+    //         _priceCalculated = ProductInfo[groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].rawMaterialsIDs[i]].price;
+    //         ProductInfo[groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].rawMaterialsIDs[i]].isConsume = true;
+    //         delete(groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].rawMaterialsIDs[i]);
     //     }
-    //     groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].units -= _units;
+    //     groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].units -= _units;
     //     tempBArray = tempBytesArray;
     //     delete(tempBytesArray);
     //     return(tempBArray,_priceCalculated);
@@ -991,13 +991,13 @@ contract Inventory is Owned {
 
     // }
 
-    function getRawMatrialsFromInventory(
+    function getRawMaterialsFromInventory(
         address _operationLead,
         bytes32 _operationName,
         bytes32 _inventoryID,
         uint256 _units,
-        bytes32[] _rawMatrialGroupID,
-        uint256[] _rawMatrialUnits,
+        bytes32[] _rawMaterialGroupID,
+        uint256[] _rawMaterialUnits,
         bytes32 _productDescription
     )
         public
@@ -1006,25 +1006,25 @@ contract Inventory is Owned {
         ) {
         require(opTeam.isOperator(_operationName,_operationLead)); 
         //require(operationDetails[_operationName].teamLead == msg.sender);
-        // require(groupIDWithInventoryProductsArray[_rawMatrialGroupID][_inventoryID].units >= _units);
+        // require(groupIDWithInventoryProductsArray[_rawMaterialGroupID][_inventoryID].units >= _units);
         // bytes32[] tempBArray;
         for (uint k = 0; k<_units;k++) {
             // uint256 _priceCalculated;
-            // for (uint i = 0; i < _rawMatrialGroupID.length;i++) {
-            //     // tempBytesArray = Invt.getRawMatrialFromInventory(_inventoryID,_rawMatrialGroupID[i],_rawMatrialUnits[i])[0];
-            //     // priceCalculator += Invt.getRawMatrialFromInventory(_inventoryID,_rawMatrialGroupID[i],_rawMatrialUnits[i])[1];    
-            //     bytes32 rMGid = _rawMatrialGroupID[i];
-            //     // for (uint j = 0; j<_rawMatrialUnits[i];j++) {
+            // for (uint i = 0; i < _rawMaterialGroupID.length;i++) {
+            //     // tempBytesArray = Invt.getRawMaterialFromInventory(_inventoryID,_rawMaterialGroupID[i],_rawMaterialUnits[i])[0];
+            //     // priceCalculator += Invt.getRawMaterialFromInventory(_inventoryID,_rawMaterialGroupID[i],_rawMaterialUnits[i])[1];    
+            //     bytes32 rMGid = _rawMaterialGroupID[i];
+            //     // for (uint j = 0; j<_rawMaterialUnits[i];j++) {
             //     //     ProductsArray memory newProductsArray;
             //     //     newProductsArray = groupIDWithInventoryProductsArray[rMGid][_inventoryID];
 
-            //     //     tempBytesArray.push(newProductsArray.rawMatrialsIDs[j]);
-            //     //     _priceCalculated = ProductInfo[newProductsArray.rawMatrialsIDs[j]].price;
-            //     //     ProductInfo[newProductsArray.rawMatrialsIDs[j]].isConsume = true;
-            //     //     delete(newProductsArray.rawMatrialsIDs[j]);
+            //     //     tempBytesArray.push(newProductsArray.rawMaterialsIDs[j]);
+            //     //     _priceCalculated = ProductInfo[newProductsArray.rawMaterialsIDs[j]].price;
+            //     //     ProductInfo[newProductsArray.rawMaterialsIDs[j]].isConsume = true;
+            //     //     delete(newProductsArray.rawMaterialsIDs[j]);
             //     //     groupIDWithInventoryProductsArray[rMGid][_inventoryID] = newProductsArray;
             //     // }
-            //     // groupIDWithInventoryProductsArray[rMGid][_inventoryID].units -= _rawMatrialUnits[i];
+            //     // groupIDWithInventoryProductsArray[rMGid][_inventoryID].units -= _rawMaterialUnits[i];
             // }
             bytes32 _productID = keccak256(_operationName,block.timestamp);
             FinalProduct memory newFinalProduct;
@@ -1034,7 +1034,7 @@ contract Inventory is Owned {
             // newFinalProduct.childs = tempBytesArray;
             newFinalProduct.additionalDiscription = _productDescription;
             // newFinalProduct.price = _priceCalculated;
-            if (getRawForFinalProduct(_inventoryID,_rawMatrialGroupID,_rawMatrialUnits,_productID)) {
+            if (getRawForFinalProduct(_inventoryID,_rawMaterialGroupID,_rawMaterialUnits,_productID)) {
                 manufacturedProducts[_productID] = newFinalProduct;
                 finalProductsArray[_operationName].units += 1;
                 finalProductsArray[_operationName].FinalProductIDs.push(_productID);
@@ -1047,27 +1047,27 @@ contract Inventory is Owned {
 
     function getRawForFinalProduct(
         bytes32 _inventoryID,
-        bytes32[] _rawMatrialGroupID,
-        uint256[] _rawMatrialUnits,
+        bytes32[] _rawMaterialGroupID,
+        uint256[] _rawMaterialUnits,
         bytes32 _finalProductID
     )
         public
         returns(bool) {
-            for (uint i = 0; i < _rawMatrialGroupID.length;i++) {
-                // tempBytesArray = Invt.getRawMatrialFromInventory(_inventoryID,_rawMatrialGroupID[i],_rawMatrialUnits[i])[0];
-                // priceCalculator += Invt.getRawMatrialFromInventory(_inventoryID,_rawMatrialGroupID[i],_rawMatrialUnits[i])[1];    
-                bytes32 rMGid = _rawMatrialGroupID[i];
-                for (uint j = 0; j<_rawMatrialUnits[i];j++) {
+            for (uint i = 0; i < _rawMaterialGroupID.length;i++) {
+                // tempBytesArray = Invt.getRawMaterialFromInventory(_inventoryID,_rawMaterialGroupID[i],_rawMaterialUnits[i])[0];
+                // priceCalculator += Invt.getRawMaterialFromInventory(_inventoryID,_rawMaterialGroupID[i],_rawMaterialUnits[i])[1];    
+                bytes32 rMGid = _rawMaterialGroupID[i];
+                for (uint j = 0; j<_rawMaterialUnits[i];j++) {
                         ProductsArray memory newProductsArray;
                         newProductsArray = groupIDWithInventoryProductsArray[rMGid][_inventoryID];
 
-                        tempBytesArray.push(newProductsArray.rawMatrialsIDs[j]);
-                        priceCalculated = ProductInfo[newProductsArray.rawMatrialsIDs[j]].price;
-                        ProductInfo[newProductsArray.rawMatrialsIDs[j]].isConsume = true;
-                        delete(newProductsArray.rawMatrialsIDs[j]);
+                        tempBytesArray.push(newProductsArray.rawMaterialsIDs[j]);
+                        priceCalculated = ProductInfo[newProductsArray.rawMaterialsIDs[j]].price;
+                        ProductInfo[newProductsArray.rawMaterialsIDs[j]].isConsume = true;
+                        delete(newProductsArray.rawMaterialsIDs[j]);
                         groupIDWithInventoryProductsArray[rMGid][_inventoryID] = newProductsArray;
                     }
-                    groupIDWithInventoryProductsArray[rMGid][_inventoryID].units -= _rawMatrialUnits[i];
+                    groupIDWithInventoryProductsArray[rMGid][_inventoryID].units -= _rawMaterialUnits[i];
             }
         manufacturedProducts[_finalProductID].price = priceCalculated;
         manufacturedProducts[_finalProductID].childs = tempBytesArray;

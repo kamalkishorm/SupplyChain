@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
-import './Authorizer.sol';
-import './Owned.sol';
-import './Inventory.sol';
+import "./Authorizer.sol";
+import "./Owned.sol";
+import "./Inventory.sol";
 
 contract OperationTeam is Owned {
     
@@ -21,8 +21,8 @@ contract OperationTeam is Owned {
         address[] teamMembers;
         bytes32 teamName;
         bytes32 operationName;
-        bytes32[] rawMatrialGroupID;
-        uint256[] rawMatrialUnits;
+        bytes32[] rawMaterialGroupID;
+        uint256[] rawMaterialUnits;
         bytes32 productDescription;
     }
     
@@ -76,8 +76,8 @@ contract OperationTeam is Owned {
         address[] _teamMembers,
         bytes32 _teamName,
         bytes32 _operationName,
-        bytes32[] _rawMatrialGroupID,
-        uint256[] _rawMatrialUnits,
+        bytes32[] _rawMaterialGroupID,
+        uint256[] _rawMaterialUnits,
         bytes32 _productDescription
     )
         public
@@ -93,8 +93,8 @@ contract OperationTeam is Owned {
             newOperationTeamInfo.teamMembers = _teamMembers;
             newOperationTeamInfo.teamName = _teamName;
             newOperationTeamInfo.operationName = _operationName;
-            newOperationTeamInfo.rawMatrialGroupID = _rawMatrialGroupID;
-            newOperationTeamInfo.rawMatrialUnits = _rawMatrialUnits;
+            newOperationTeamInfo.rawMaterialGroupID = _rawMaterialGroupID;
+            newOperationTeamInfo.rawMaterialUnits = _rawMaterialUnits;
             newOperationTeamInfo.productDescription = _productDescription;            
             operationDetails[_operationName] = newOperationTeamInfo;
             operationTeams.push(_operationName);
@@ -104,7 +104,7 @@ contract OperationTeam is Owned {
 
     function isOperator(bytes32 _operationName,address operationLeadAddress) public constant returns(bool) {
         if (operationDetails[_operationName].teamLead == operationLeadAddress) {
-           return true ;
+            return true;
         } else {
             return false;
         }
@@ -119,9 +119,9 @@ contract OperationTeam is Owned {
         returns(
             bool
         ) {
-        return (Invt.getRawMatrialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMatrialGroupID,operationDetails[_operationName].rawMatrialUnits,operationDetails[_operationName].productDescription));
+        return (Invt.getRawMaterialsFromInventory(msg.sender,_operationName,_inventoryID,_units,operationDetails[_operationName].rawMaterialGroupID,operationDetails[_operationName].rawMaterialUnits,operationDetails[_operationName].productDescription));
     }
-    // function getRawMatrialsFromInventory(
+    // function getRawMaterialsFromInventory(
     //     bytes32 _operationName,
     //     bytes32 _inventoryID,
     //     uint256 _units
@@ -132,9 +132,9 @@ contract OperationTeam is Owned {
     //     ) {
     //     require(operationDetails[_operationName].teamLead == msg.sender);
     //     priceCalculator = 0;
-    //     for (uint i = 0; i < operationDetails[_operationName].rawMatrialGroupID.length;i++) {
-    //         tempBytesArray = Invt.getRawMatrialFromInventory(_inventoryID,operationDetails[_operationName].rawMatrialGroupID[i],operationDetails[_operationName].rawMatrialUnits[i])[0];
-    //         priceCalculator += Invt.getRawMatrialFromInventory(_inventoryID,operationDetails[_operationName].rawMatrialGroupID[i],operationDetails[_operationName].rawMatrialUnits[i])[1];            
+    //     for (uint i = 0; i < operationDetails[_operationName].rawMaterialGroupID.length;i++) {
+    //         tempBytesArray = Invt.getRawMaterialFromInventory(_inventoryID,operationDetails[_operationName].rawMaterialGroupID[i],operationDetails[_operationName].rawMaterialUnits[i])[0];
+    //         priceCalculator += Invt.getRawMaterialFromInventory(_inventoryID,operationDetails[_operationName].rawMaterialGroupID[i],operationDetails[_operationName].rawMaterialUnits[i])[1];            
     //     }
     //     bytes32 _productID = keccak256(tempBytesArray.length,tempBytesArray);
     //     FinalProduct memory newFinalProduct;
